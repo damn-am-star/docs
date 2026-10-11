@@ -49,4 +49,14 @@ describe('getTheme basics', () => {
     expect(componentTheme.nightScheme).toBe(defaultComponentTheme.nightScheme)
     expect(componentTheme.dayScheme).toBe(defaultComponentTheme.dayScheme)
   })
+
+  test('resolve the plane theme alias to dark', () => {
+    const cookieValue = JSON.stringify({
+      color_mode: 'dark',
+      dark_theme: { name: 'plane', color_mode: 'dark' },
+    } as ThemeCookieValue)
+
+    expect(getCssTheme(cookieValue).darkTheme).toBe('dark')
+    expect(getComponentTheme(cookieValue).nightScheme).toBe('dark')
+  })
 })

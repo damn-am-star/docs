@@ -98,6 +98,15 @@ describe('colorModeScript', () => {
     expectMatchesGetCssTheme(cookieFor(value), JSON.stringify(value))
   })
 
+  test('resolves the plane theme alias to dark', () => {
+    const value = {
+      color_mode: 'dark',
+      dark_theme: { name: 'plane', color_mode: 'dark' },
+    }
+    expectMatchesGetCssTheme(cookieFor(value), JSON.stringify(value))
+    expect(runScript(cookieFor(value)).attrs['data-dark-theme']).toBe('dark')
+  })
+
   test('ignores unknown modes and themes', () => {
     const value = {
       color_mode: 'sepia',
