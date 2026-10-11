@@ -21,6 +21,10 @@ export enum SupportedTheme {
   dark_high_contrast = 'dark_high_contrast',
 }
 
+export const themeAliases: Record<string, SupportedTheme> = {
+  plane: SupportedTheme.dark,
+}
+
 type CssColorTheme = {
   colorMode: CssColorMode
   lightTheme: SupportedTheme
@@ -68,8 +72,14 @@ function filterTheme(
   theme?: { name?: string; color_mode?: string } | null,
 ): SupportedTheme | undefined {
   const { name = '', color_mode = '' } = theme ?? {}
+  if (themeAliases[name]) {
+    return themeAliases[name]
+  }
   if (Object.values<string>(SupportedTheme).includes(name)) {
     return name as SupportedTheme
+  }
+  if (themeAliases[color_mode]) {
+    return themeAliases[color_mode]
   }
   if (Object.values<string>(SupportedTheme).includes(color_mode)) {
     return color_mode as SupportedTheme

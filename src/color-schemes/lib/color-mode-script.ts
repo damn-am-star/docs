@@ -1,5 +1,10 @@
 import { COLOR_MODE_COOKIE_NAME } from '@/frame/lib/constants'
-import { CssColorMode, SupportedTheme, defaultCSSTheme } from '@/color-schemes/components/useTheme'
+import {
+  CssColorMode,
+  SupportedTheme,
+  defaultCSSTheme,
+  themeAliases,
+} from '@/color-schemes/components/useTheme'
 
 // This script runs synchronously in the document head before first paint. It reads the
 // color_mode cookie from github.com, which is not HttpOnly, and writes data-color-mode,
@@ -16,18 +21,19 @@ import { CssColorMode, SupportedTheme, defaultCSSTheme } from '@/color-schemes/c
 // and no unsafe-inline.
 const modes = JSON.stringify(Object.values(CssColorMode))
 const themes = JSON.stringify(Object.values(SupportedTheme))
+const aliases = JSON.stringify(themeAliases)
 const defaults = JSON.stringify(defaultCSSTheme)
 const cookieName = JSON.stringify(COLOR_MODE_COOKIE_NAME)
 
 export const colorModeScript = `(function(){
-var MODES=${modes},THEMES=${themes},D=${defaults};
+var MODES=${modes},THEMES=${themes},ALIASES=${aliases},D=${defaults};
 var css=D;
 try{
 var m=document.cookie.match(new RegExp('(?:^|; )'+${cookieName}+'=([^;]*)'));
 if(m){
 var p=JSON.parse(decodeURIComponent(m[1]));
 var fMode=function(x){return MODES.indexOf(x)>-1?x:null;};
-var fTheme=function(t){if(!t)return null;if(THEMES.indexOf(t.name)>-1)return t.name;if(THEMES.indexOf(t.color_mode)>-1)return t.color_mode;return null;};
+var fTheme=function(t){if(!t)return null;if(ALIASES[t.name])return ALIASES[t.name];if(THEMES.indexOf(t.name)>-1)return t.name;if(ALIASES[t.color_mode])return ALIASES[t.color_mode];if(THEMES.indexOf(t.color_mode)>-1)return t.color_mode;return null;};
 css={colorMode:fMode(p.color_mode)||D.colorMode,lightTheme:fTheme(p.light_theme)||D.lightTheme,darkTheme:fTheme(p.dark_theme)||D.darkTheme};
 }
 }catch(e){}
