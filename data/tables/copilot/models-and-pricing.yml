@@ -272,6 +272,28 @@
   output: $5.00
   cache_write: $1.25
 
+- model: Claude Haiku 5.5
+  provider: anthropic
+  release_status: GA
+  category: Lightweight
+  threshold: '≤ 100K'
+  tier: Default
+  input: $0.10
+  cached_input: $0.01
+  output: $0.50
+  cache_write: $0.125
+
+- model: Claude Haiku 5.5
+  provider: anthropic
+  release_status: GA
+  category: Lightweight
+  threshold: '> 100K'
+  tier: Long context
+  input: $0.50
+  cached_input: $0.05
+  output: $2.50
+  cache_write: $0.625
+
 - model: Claude Sonnet 4
   provider: anthropic
   release_status: GA

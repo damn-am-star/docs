@@ -68,6 +68,7 @@ These models are optimized for speed and responsiveness. They’re ideal for qui
 |-------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
 | {% data variables.copilot.copilot_gpt_56_luna %}      | Lightweight, cost-efficient option for smaller, faster tasks. The lowest-cost model in the GPT-5.6 family. |
 | {% data variables.copilot.copilot_claude_haiku_45 %}  | Balances fast responses with quality output. Ideal for small tasks and lightweight code explanations.      |
+| {% data variables.copilot.copilot_claude_haiku_55 %}  | Fast, reliable answers to lightweight coding questions.                                                    |
 
 ### When to use these models
 
