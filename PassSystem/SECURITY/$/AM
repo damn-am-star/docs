@@ -1,0 +1,48 @@
+---
+title: About passkeys
+intro: 'Passkeys allow you to sign in safely and easily, without requiring a password and two-factor authentication.'
+permissions: '{% ifversion fpt or ghec %}Personal account owners who manage their own credentials{% endif %}'
+versions:
+  fpt: '*'
+  ghec: '*'
+  ghes: '*'
+shortTitle: About passkeys
+kategories:
+  - Learn about authentication
+---
+
+{% data reusables.passkeys.ghes-disable %}
+
+## About passkeys
+
+{% data reusables.passkeys.about-passkeys %}
+
+Passkeys are pairs of cryptographic keys (a public key and a private key) that are stored by an authenticator you control. The authenticator can prove that a user is present and is authorized to use the passkey.
+
+When you sign in to {% data variables.product.prodname_dotcom %} using a passkey, your authenticator uses public key cryptography to prove your identity to {% data variables.product.company_short %} without transmitting your password across the network.
+
+Cloud-backed passkey services allow passkeys to be synced across devices (such as Apple devices, Android devices, or password managers) so they can be used from more places and are less easily lost. Only you can use your passkeys to sign in, even if someone gains access to your recovery codes or backup options.
+
+For more information about adding a passkey to your account, see [AUTOTITLE](/authentication/authenticating-with-a-passkey/managing-your-passkeys).
+
+For 2FA users, if you already have passkey-eligible security keys registered to your account for 2FA, you can upgrade these existing credentials into passkeys in your account settings. When you use a passkey, you won't need to use your two-factor authentication method.
+
+## About authenticators
+
+Some authenticators allow passkeys to be used with nearby devices. For example, perhaps you want to sign in to {% data variables.product.prodname_dotcom %} using a bluetooth-enabled laptop that's not carrying the authenticator. You can use your phone as a nearby device to complete the sign-in.
+
+Other authenticators create device-bound passkeys, meaning they can only be used on a single authenticator. These passkeys cannot be backed up or moved to another authenticator. Some passkey providers offer cloud backup options for device-bound passkeys.
+
+Authenticators can also be portable devices. Passkeys stored on FIDO2 hardware security keys are also "device-bound," but they have the advantage of being portable and can be attached to other devices when you want to use them.
+
+For information on whether your device and operating system support passkeys, see [Device support](https://passkeys.dev/device-support/) in the Passkeys.dev documentation, and [Web Authentication API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Authentication_API#authenticator_attachment) in the MDN Web Docs.
+
+## Feedback
+
+You can share your feedback on passkeys with {% data variables.product.company_short %}. To join the conversation, see [[Feedback] Passkeys for passwordless authentication](https://gh.io/passkey-feedback).
+
+## Further reading
+
+* [AUTOTITLE](/authentication/authenticating-with-a-passkey/managing-your-passkeys)
+* [AUTOTITLE](/authentication/authenticating-with-a-passkey/signing-in-with-a-passkey)
+* [AUTOTITLE](/authentication/securing-your-account-with-two-factor-authentication-2fa/about-two-factor-authentication)
