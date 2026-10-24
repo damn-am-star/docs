@@ -1,0 +1,37 @@
+# Forms and authentication accessibility checklist
+
+Use this manual-first checklist for forms, validation, account access, and multistep processes. WCAG 2.2 Level AA includes both Level A and Level AA criteria. Expected results below describe those requirements unless marked **Recommended**; testing methods and tool choices are recommendations, not mandated implementations.
+
+This is guidance, not an audit report, an exhaustive conformance assessment, or certification. Passing these checks or an automated scan does not establish conformance. Consult the [WCAG 2.2 standard](https://www.w3.org/TR/WCAG22/) and [quick reference](https://www.w3.org/WAI/WCAG22/quickref/) for complete requirements and exceptions.
+
+## Prepare and record
+
+Use safe test accounts and data for complete sign-in, recovery, multifactor authentication, editing, and submission journeys. Do not trigger real purchases or delete real user data. Include desktop/mobile layouts, dialogs, loading, empty, invalid, server-error, timeout, and success states. Exercise every authentication alternative and multistep route, not just the initial form.
+
+Record **Pass**, **Fail**, or **Not applicable** with a reason per check, page, and state. Leave untested checks unassessed and list them as coverage gaps. Include URL/build, role, OS/browser/assistive-technology versions, input method, viewport, zoom, theme, reproduction steps, expected/actual behavior, and evidence without passwords, codes, or personal data. Retest fixes and full processes. The [audit overview](./manual-accessibility-checklist.md#record-results) has a reusable recording template and links to the other four categories.
+
+## Tools
+
+| Tool | Use |
+| --- | --- |
+| Keyboard alone | Complete forms, correct errors, review submissions, and respond to timeout warnings without a pointer. |
+| Screen readers | Use NVDA with Firefox/Chrome on Windows, VoiceOver with Safari on macOS/iOS, or TalkBack with Chrome on Android to check labels/groups, instructions, states, and error/status announcements. |
+| Browser DevTools and accessibility tree | Inspect label associations, group names, error descriptions, input purposes, and autocomplete tokens. |
+| Password manager, browser autofill, and clipboard | Test filling credentials and copying/pasting passwords and verification codes with safe accounts. Do not record secrets in evidence. |
+| Test-environment timeout controls | Trigger expiration and extension warnings safely; measure warning time and repeat extensions. |
+| axe DevTools, Accessibility Insights, or WAVE | Scan initial, invalid, and success states for machine-detectable label/relationship issues; manually assess error recovery and authentication barriers. |
+| Optional axe-core with Playwright/Cypress | Add regression scans and assertions for full test-account journeys, without replacing manual validation. |
+
+## Checks
+
+| Check | Manual steps | Expected pass result and criteria |
+| --- | --- | --- |
+| Labels, instructions, and groups | Navigate inputs with keyboard and screen reader. Check required status, formats, examples, checkbox/radio groups, and label activation. | Inputs have descriptive labels or instructions and programmatic relationships; related groups have a meaningful group label. A placeholder alone is not a sufficient persistent label. **1.3.1 Info and Relationships (A), 3.3.2 Labels or Instructions (A), 4.1.2 Name, Role, Value (A)**. |
+| Input purpose and autocomplete | Inspect fields collecting information about the user, such as name, email, address, and password, and try browser autofill. | For fields serving a purpose in WCAG's defined input-purpose list, that purpose is programmatically determinable where supported by the technology, commonly with valid HTML `autocomplete` tokens. **1.3.5 Identify Input Purpose (AA)**. **Recommended:** use suitable input types and mobile keyboards too. |
+| Errors and recovery | Submit empty and invalid values, then correct them using keyboard and screen reader. Check both field-level and server-side errors. | Detected errors identify the affected item and describe the error in text. Known correction suggestions are supplied unless they jeopardize security or purpose. Errors and their relationships are accessible. **3.3.1 Error Identification (A), 3.3.3 Error Suggestion (AA), 1.3.1 (A)**. **Recommended:** preserve valid entries and provide a linked error summary for long forms. |
+| Predictability | Focus controls and change selections without submitting. Compare repeated navigation and same-function controls across pages. | Focus alone does not initiate a context change; changing a setting does not unexpectedly change context unless the user was advised beforehand. Repeated navigation has consistent relative order and same-function components have consistent identification. **3.2.1 On Focus (A), 3.2.2 On Input (A), 3.2.3 Consistent Navigation (AA), 3.2.4 Consistent Identification (AA)**. |
+| Important submissions | Safely exercise legal/financial transactions, changes/deletions of user-controllable stored data, and test-response submissions. Try review, correction, cancellation, and reversal. | At least one safeguard exists: submission is reversible, data is checked for input errors with an opportunity to correct, or users can review, confirm, and correct before finalizing. **3.3.4 Error Prevention (Legal, Financial, Data) (AA)**. |
+| Redundant entry | Complete a multistep process and look for information requested again, including details entered earlier or provided to the user. | Previously supplied information in the same process is auto-populated or selectable unless re-entry is essential, required for security, or the information is no longer valid. **3.3.7 Redundant Entry (A)**. |
+| Accessible authentication | Test every authentication step, including recovery and multifactor challenges. Try a password manager, autofill, copying/pasting passwords and codes, and any alternative method. | No cognitive function test, such as remembering a password, solving a puzzle, or transcribing a code, is required unless there is a non-cognitive alternative, a mechanism assisting completion, an object-recognition test, or recognition of personal non-text content the user supplied to the site. Password-manager and paste support are practical assistance mechanisms; do not block them. Object recognition/personal content are AA exceptions, not blanket CAPTCHA exemptions; alternatives must still satisfy other criteria such as 1.1.1. **3.3.8 Accessible Authentication (Minimum) (AA)**. |
+| Time limits | Trigger session expiration and timed steps using test settings where possible. Try disabling, adjusting, or extending the limit and read warnings with assistive technology. | For each content-set time limit, users can turn it off beforehand, adjust it beforehand over at least ten times the default, or extend it after a warning giving at least 20 seconds for a simple action, at least ten times. Exceptions: real-time events with no alternative, essential limits, or limits longer than 20 hours. **2.2.1 Timing Adjustable (A)**. **Recommended:** preserve work across reauthentication. |
+| Consistent help | Compare pages containing repeated contact details, contact mechanisms, self-help, or automated contact. Navigate them with a screen reader. | Repeated help mechanisms occur in the same relative order to other content, unless the user initiates the change. The criterion does not require adding help where none exists. **3.2.6 Consistent Help (A)**. |
