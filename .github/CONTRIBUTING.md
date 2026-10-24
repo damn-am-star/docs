@@ -14,6 +14,8 @@ Use the table of contents icon <img alt="Table of contents icon" src="/contribut
 
 **Start here:** Visit [docs.github.com/en/contributing](https://docs.github.com/en/contributing) for complete contributor onboarding and guidelines.
 
+As noted in our contributor onboarding guidelines, if an issue already exists, please don't start work on it until it has been assigned a `help wanted` label.
+
 For repository-specific setup, read the [README](../README.md) file. The official docs site also provides these helpful resources:
 
 - [Finding ways to contribute to open source on GitHub](https://docs.github.com/en/get-started/exploring-projects-on-github/finding-ways-to-contribute-to-open-source-on-github)
@@ -74,7 +76,7 @@ For complete style guidance, see our [style guide](https://docs.github.com/en/co
 
 #### Repository-specific options:
 
-**Make changes in the UI:** Click **Make a contribution** at the bottom of any docs page for small changes like typos or broken links.
+**Make changes in the UI:** For small changes like typos or broken links, click **Make a contribution** at the bottom of any docs page. The button opens the article's source file in this repository. Click the pencil icon to edit the file. GitHub asks you to fork the repository, then lets you propose your change as a pull request. See "[Editing files in another user's repository](https://docs.github.com/en/repositories/working-with-files/managing-files/editing-files#editing-files-in-another-users-repository)."
 
 <img src="/contributing/images/contribution_cta.png" />
 

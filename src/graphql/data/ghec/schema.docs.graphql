@@ -7816,8 +7816,7 @@ type ConvertedToDiscussionEvent implements Node @docsCategory(name: "issues") {
 
 """
 Request Copilot code review for new pull requests automatically if the author
-has access to Copilot code review and their premium requests quota has not
-reached the limit.
+has access to Copilot code review and AI credits.
 """
 type CopilotCodeReviewParameters @docsCategory(name: "pulls") {
   """
@@ -7833,8 +7832,7 @@ type CopilotCodeReviewParameters @docsCategory(name: "pulls") {
 
 """
 Request Copilot code review for new pull requests automatically if the author
-has access to Copilot code review and their premium requests quota has not
-reached the limit.
+has access to Copilot code review and AI credits.
 """
 input CopilotCodeReviewParametersInput @docsCategory(name: "pulls") {
   """
@@ -27670,7 +27668,8 @@ type Mutation @docsCategory(name: "meta") {
   ): ArchiveProjectV2ItemPayload @docsCategory(name: "projects")
 
   """
-  Archive a pull request. Closes and marks the pull request as archived. Only repository admins can archive pull requests.
+  Archive a pull request. Closes and marks the pull request as archived. Users
+  with the triage role or higher can archive pull requests.
   """
   archivePullRequest(
     """
@@ -29373,8 +29372,8 @@ type Mutation @docsCategory(name: "meta") {
 
   """
   Unarchive a pull request. Removes the archived flag from the pull request.
-  Does not automatically reopen or unlock the pull request. Only repository
-  admins can unarchive pull requests.
+  Does not automatically reopen or unlock the pull request. Users with the
+  triage role or higher can unarchive pull requests.
   """
   unarchivePullRequest(
     """
@@ -46070,9 +46069,8 @@ type PullRequestParameters @docsCategory(name: "pulls") {
   requiredReviewThreadResolution: Boolean!
 
   """
-  This field is in beta and subject to change. A collection of reviewers and
-  associated file patterns. Each reviewer has a list of file patterns which
-  determine the files that reviewer is required to review.
+  A collection of reviewers and associated file patterns. Each reviewer has a
+  list of file patterns which determine the files that reviewer is required to review.
   """
   requiredReviewers: [RequiredReviewerConfiguration!]
 }
@@ -46118,9 +46116,8 @@ input PullRequestParametersInput @docsCategory(name: "pulls") {
   requiredReviewThreadResolution: Boolean!
 
   """
-  This argument is in beta and subject to change. A collection of reviewers and
-  associated file patterns. Each reviewer has a list of file patterns which
-  determine the files that reviewer is required to review.
+  A collection of reviewers and associated file patterns. Each reviewer has a
+  list of file patterns which determine the files that reviewer is required to review.
   """
   requiredReviewers: [RequiredReviewerConfigurationInput!]
 }
@@ -55146,6 +55143,11 @@ type Repository implements Node &
   ): RepositoryConnection!
 
   """
+  Identifies the primary key from the database as a BigInt.
+  """
+  fullDatabaseId: BigInt
+
+  """
   The funding links for this repository
   """
   fundingLinks: [FundingLink!]!
@@ -58189,8 +58191,7 @@ enum RepositoryRuleType {
 
   """
   Request Copilot code review for new pull requests automatically if the author
-  has access to Copilot code review and their premium requests quota has not
-  reached the limit.
+  has access to Copilot code review and AI credits.
   """
   COPILOT_CODE_REVIEW
 

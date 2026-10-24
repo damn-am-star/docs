@@ -67,9 +67,6 @@ To use the CLI programmatically, include the `-p` or `--prompt` command-line opt
 
 ## Running {% data variables.copilot.copilot_cli_short %} commands in a sandbox
 
-> [!NOTE]
-> {% data reusables.cli.public-preview-sandbox %}
-
 To prevent {% data variables.product.prodname_copilot_short %} from modifying files you don't want it to touch, you can force agents to run commands within a local sandboxed environment. Alternatively, you can run an entire CLI session in an isolated environment in the cloud. For more information, see [AUTOTITLE](/copilot/concepts/about-cloud-and-local-sandboxes).
 
 ### Local sandboxing
@@ -77,6 +74,9 @@ To prevent {% data variables.product.prodname_copilot_short %} from modifying fi
 You can enable local sandboxing inside a {% data variables.copilot.copilot_cli_short %} session to restrict {% data variables.product.prodname_copilot_short %}'s access to your filesystem, network, and system capabilities. To enable it, run `/sandbox enable` inside a session.
 
 ### Cloud sandboxing
+
+> [!NOTE]
+> {% data reusables.cli.public-preview-cloud-sandbox %}
 
 You can start a {% data variables.copilot.copilot_cli_short %} session inside an isolated, cloud-hosted environment with cloud sandboxes. This is useful when you want to run code without affecting your local machine, keep a session's state between uses, continue a session from a different machine, or run multiple tasks in parallel. Cloud sandbox policies inherit from {% data variables.copilot.copilot_cloud_agent %} policies, so existing security controls like firewall rules extend to cloud sandboxes without additional setup.
 
@@ -124,7 +124,7 @@ The following sections provide examples of tasks you can complete with {% data v
 
 ### Computer use
 
-In local sessions on macOS and Windows, you can enable computer use to let {% data variables.product.prodname_copilot_short %} interact with desktop applications. This capability is useful for workflows in legacy and GUI-only software that do not provide an API, command-line interface, or MCP integration. For more information, see [AUTOTITLE](/copilot/concepts/agents/computer-use).
+In local sessions on macOS and Windows, you can enable computer use to let {% data variables.product.prodname_copilot_short %} interact with desktop applications. This capability is useful for workflows in legacy and GUI-only software that do not provide an API, command-line interface, or MCP integration. For more information, see [AUTOTITLE](/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/computer-use).
 
 ### Tasks involving {% data variables.product.prodname_dotcom_the_website %}
 
@@ -203,7 +203,7 @@ You can customize {% data variables.copilot.copilot_cli %} in a number of ways:
 * **{% data variables.copilot.custom_agents_caps_short %}**: {% data variables.copilot.custom_agents_caps_short %} allow you to create different specialized versions of {% data variables.product.prodname_copilot_short %} for different tasks. For example, you could customize {% data variables.product.prodname_copilot_short %} to be an expert frontend engineer following your team's guidelines. {% data variables.copilot.copilot_cli %} includes specialized {% data variables.copilot.custom_agents_short %} that it automatically delegates common tasks to. For more information, see [AUTOTITLE](/copilot/how-tos/copilot-cli/use-copilot-cli/overview#use-custom-agents).
 * **Hooks**: Hooks allow you to execute custom shell commands at key points during agent execution, enabling you to add validation, logging, security scanning, or workflow automation. See [AUTOTITLE](/copilot/concepts/agents/hooks).
 * **Skills**: Skills allow you to enhance the ability of {% data variables.product.prodname_copilot_short %} to perform specialized tasks with instructions, scripts, and resources. For more information, see [AUTOTITLE](/copilot/concepts/agents/about-agent-skills).
-* **{% data variables.copilot.copilot_memory %}**: {% data variables.copilot.copilot_memory %} allows {% data variables.product.prodname_copilot_short %} to build a persistent understanding of your repository by storing "memories", which are pieces of information about coding conventions, patterns, and preferences that {% data variables.product.prodname_copilot_short %} deduces as it works. This reduces the need to repeatedly explain context in your prompts and makes future sessions more productive. For more information, see [AUTOTITLE](/copilot/concepts/agents/copilot-memory).
+* **{% data variables.copilot.copilot_memory %}**: {% data variables.copilot.copilot_memory %} allows {% data variables.product.prodname_copilot_short %} to build a persistent understanding of your repository by storing "memories", which are pieces of information about coding conventions, patterns, and preferences that {% data variables.product.prodname_copilot_short %} deduces as it works. This reduces the need to repeatedly explain context in your prompts and makes future sessions more productive. For more information, see [AUTOTITLE](/copilot/concepts/prompting-and-context/copilot-memory).
 
 ## Security considerations
 
