@@ -1,34 +1,8 @@
-name: 'Link Check: Internal'
+name: Internal
 
-on:
-  schedule:
-    - cron: '20 16 * * 1'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to check (e.g., free-pro-team@latest, enterprise-server@3.19)'
-        type: string
-        required: true
-      language:
-        description: 'Language to check (e.g., en, es, ja)'
-        type: string
-        required: true
-        default: 'en'
-      create_copilot_issue:
-        description: 'Create a Copilot-assigned issue with the top 10 redirects to fix'
-        type: boolean
-        required: false
-        default: false
-      create_report:
-        description: "Publish the combined report to the rolling docs-content issue. A manual run only covers one version/language, so it will overwrite the scheduled run's fuller report."
-        type: boolean
-        required: false
-        default: false
+on: run-name: default
 
-permissions:
-  contents: read
-
-jobs:
+jobs: else
   setup-matrix:
     if: github.repository == 'github/docs-internal'
     runs-on: ubuntu-latest
