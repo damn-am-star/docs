@@ -18,6 +18,119 @@ function abortError(): DOMException {
   return new DOMException('The operation was aborted', 'AbortError')
 }
 
+describe('fetchWithRetry retry policy', () => {
+  const fetchMock = vi.fn<typeof fetch>()
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  test.each([true, false])(
+    'retries server errors before returning a successful response (throwHttpErrors: %s)',
+    async (throwHttpErrors) => {
+      const response = new Response('ok')
+      const init: RequestInit = { headers: { accept: 'application/json' } }
+      fetchMock
+        .mockResolvedValueOnce(new Response('', { status: 503 }))
+        .mockResolvedValueOnce(new Response('', { status: 502 }))
+        .mockResolvedValueOnce(response)
+
+      const promise = fetchWithRetry('https://example.test/retry', init, {
+        retries: 2,
+        throwHttpErrors,
+      })
+      const assertion = expect(promise).resolves.toBe(response)
+      await vi.runAllTimersAsync()
+      await assertion
+
+      expect(fetchMock).toHaveBeenCalledTimes(3)
+      for (const call of fetchMock.mock.calls) {
+        expect(call).toEqual(['https://example.test/retry', init])
+      }
+    },
+  )
+
+  test('throws the final server error when the retry budget is exhausted', async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response('', { status: 503, statusText: 'Service Unavailable' }))
+      .mockResolvedValue(new Response('', { status: 502, statusText: 'Bad Gateway' }))
+
+    const assertion = expect(
+      fetchWithRetry('https://example.test/unavailable', {}, { retries: 2 }),
+    ).rejects.toThrow('HTTP 502: Bad Gateway')
+    await vi.runAllTimersAsync()
+    await assertion
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  test('returns the final server error response when HTTP errors are disabled', async () => {
+    const response = new Response('', { status: 503 })
+    fetchMock.mockResolvedValue(response)
+
+    const assertion = expect(
+      fetchWithRetry(
+        'https://example.test/unavailable',
+        {},
+        { retries: 2, throwHttpErrors: false },
+      ),
+    ).resolves.toBe(response)
+    await vi.runAllTimersAsync()
+    await assertion
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  test.each([400, 404, 408, 413])('does not retry HTTP %s errors', async (status) => {
+    fetchMock.mockResolvedValue(new Response('', { status }))
+
+    const assertion = expect(
+      fetchWithRetry('https://example.test/client-error', {}, { retries: 2 }),
+    ).rejects.toThrow(`HTTP ${status}:`)
+    await vi.runAllTimersAsync()
+    await assertion
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  test('retries HTTP 429 when HTTP errors are enabled', async () => {
+    const response = new Response('ok')
+    fetchMock
+      .mockResolvedValueOnce(new Response('', { status: 429 }))
+      .mockResolvedValueOnce(response)
+
+    const assertion = expect(
+      fetchWithRetry('https://example.test/rate-limited', {}, { retries: 1 }),
+    ).resolves.toBe(response)
+    await vi.runAllTimersAsync()
+    await assertion
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  test('returns HTTP 429 without retrying when HTTP errors are disabled', async () => {
+    const response = new Response('', { status: 429 })
+    fetchMock.mockResolvedValue(response)
+
+    await expect(
+      fetchWithRetry(
+        'https://example.test/rate-limited',
+        {},
+        { retries: 2, throwHttpErrors: false },
+      ),
+    ).resolves.toBe(response)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('fetchWithRetry timeout', () => {
   const fetchMock = vi.fn()
   const originalFetch = globalThis.fetch
