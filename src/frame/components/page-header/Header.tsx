@@ -41,7 +41,7 @@ export const Header = ({ isNarrowMenuOpen, onNarrowMenuToggle }: Props) => {
   const languagePickerVisible = Object.keys(languages).length > 1
   const { currentVersion } = useVersion()
   const { t } = useTranslation(['header', 'search'])
-  const { params, updateParams } = useMultiQueryParams()
+  const { params, updateParams, cancelPendingUpdate } = useMultiQueryParams()
   const { hasAccount } = useHasAccount()
   const signupCTAVisible =
     hasAccount === false &&
@@ -94,9 +94,7 @@ export const Header = ({ isNarrowMenuOpen, onNarrowMenuToggle }: Props) => {
           onClick={handleClick}
           leadingComponent={<VersionPicker variant="header" onNavigate={closeNarrowMenu} />}
           trailingComponent={
-            languagePickerVisible ? (
-              <LanguagePicker variant="header" onNavigate={closeNarrowMenu} />
-            ) : undefined
+            languagePickerVisible ? <LanguagePicker onNavigate={closeNarrowMenu} /> : undefined
           }
         >
           <SubdomainNavBar.Search
@@ -120,6 +118,7 @@ export const Header = ({ isNarrowMenuOpen, onNarrowMenuToggle }: Props) => {
           setIsSearchOpen={setIsSearchOpen}
           params={params}
           updateParams={updateParams}
+          cancelPendingParamsUpdate={cancelPendingUpdate}
           searchButtonRef={searchButtonRef}
         />
       </div>

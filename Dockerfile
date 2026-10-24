@@ -4,7 +4,7 @@
 
 # Update the base image digest from the gh-base-noble package page:
 # https://github.com/github/gh-base-image/pkgs/container/gh-base-image%2Fgh-base-noble
-FROM ghcr.io/github/gh-base-image/gh-base-noble:20260914-014148-gb620b63bf@sha256:fe199dcd96e01f53c42d077dee87f428e8341379aab0987721e16b32462feb05 AS base
+FROM ghcr.io/github/gh-base-image/gh-base-noble:20261022-141141-gfa3bc27f7@sha256:c1175f242e207eeaf679305e553b6f1a2f69d06fa7b3840b199c5c33da2de130 AS base
 # Install curl for NodeSource setup.
 # Install git for early-access and translation clones.
 # Ubuntu's nodejs package lags the Node LTS release line.
@@ -43,7 +43,6 @@ FROM base AS all_deps
 USER node:node
 WORKDIR $APP_HOME
 COPY --chown=node:node package.json package-lock.json ./
-COPY --chown=node:node patches patches/
 RUN npm ci --registry https://registry.npmjs.org/
 
 FROM all_deps AS prod_deps
@@ -79,7 +78,7 @@ COPY --chown=node:node --from=clones $APP_HOME/content content/
 COPY --chown=node:node --from=clones $APP_HOME/translations translations/
 COPY --chown=node:node --from=prod_deps $APP_HOME/node_modules node_modules/
 COPY --chown=node:node --from=build $APP_HOME/.next .next/
-COPY --chown=node:node --from=warmup_cache $APP_HOME/.remotejson-cache ./
+COPY --chown=node:node --from=warmup_cache $APP_HOME/.remotejson-cache .remotejson-cache/
 # Expose the build SHA at runtime when callers pass --build-arg BUILD_SHA=abc123.
 ARG BUILD_SHA
 ENV BUILD_SHA=$BUILD_SHA
