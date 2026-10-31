@@ -2,7 +2,7 @@
 title: GitHub Copilot app
 shortTitle: GitHub Copilot app
 intro: 'The {% data variables.copilot.github_copilot_app %} is a desktop application for agent-driven development that brings parallel workstreams, {% data variables.product.github %} integration, and PR lifecycle management into one place.'
-product: '{% data reusables.gated-features.github-app %}<br><a href="https://github.com/features/ai/github-app" target="_blank" class="btn btn-primary mt-3 mr-3 no-underline"><span>Download {% data variables.copilot.github_copilot_app %}</span> {% octicon "link-external" height:16 %}</a>'
+product: '{% data reusables.gated-features.github-app %}<br>{% data reusables.copilot.github-app-download-button %}'
 versions:
   feature: copilot
 contentType: concepts
@@ -31,6 +31,8 @@ The {% data variables.copilot.github_copilot_app %} supports the following opera
 * Linux
 * Windows
 
+On Windows, you can also run agent sessions inside a Windows Subsystem for Linux (WSL) 2 distribution. See [AUTOTITLE](/copilot/how-tos/github-copilot-app/agent-sessions#running-sessions-in-wsl).
+
 ## Benefits of using the {% data variables.copilot.github_copilot_app %}
 
 * **Work in parallel.** Run multiple agent sessions at the same time, each on its own branch, so you can make progress on several tasks without waiting for one to finish.
@@ -41,7 +43,9 @@ The {% data variables.copilot.github_copilot_app %} supports the following opera
 
 ## What can I do with the {% data variables.copilot.github_copilot_app %}?
 
+* **Projects:** Give {% data variables.product.prodname_copilot_short %} a goal and let it coordinate the work. Projects can span one or more repositories or focus on tasks that don't require a repository. Within a project, you can track progress, share context, review artifacts, and set up recurring tasks. For more information, see [AUTOTITLE](/copilot/how-tos/github-copilot-app/working-with-projects).
 * **Parallel workspaces:** Run multiple isolated agent sessions simultaneously, each with a dedicated git worktree and branch. You can run a session in a cloud sandbox, or configure a local sandbox to restrict the resources available to agent-run tools on your machine. For more information, see [AUTOTITLE](/copilot/how-tos/github-copilot-app/agent-sessions#using-cloud-and-local-sandboxes).
+* **Cloud sessions:** Run a session in a cloud sandbox so it doesn't use your machine. Because the session runs in the cloud, you can follow and steer it from any {% data variables.product.prodname_copilot_short %} client. For example, you can start work in the {% data variables.copilot.github_copilot_app %}, steer it from {% data variables.product.prodname_mobile %} while away, then pick it back up in the {% data variables.copilot.github_copilot_app %} or another client. For more information, see [AUTOTITLE](/copilot/concepts/security-governance-and-network-settings/about-cloud-sandboxes).
 * **Session modes:** Choose how you work with agents: Interactive (collaborative), Plan (agent plans, you approve), or Autopilot (fully autonomous). You can also select from multiple LLMs and adjust reasoning effort for each session.
 * **Model selection:** Select from multiple LLMs, including models from your own provider using bring your own key (BYOK), and adjust reasoning effort for each session.
 * **{% data variables.product.github %} integration:** Browse and find issues, start sessions from them, create and close pull requests, review pull requests, view CI check results, and search across your repositories—all within the app.
@@ -50,13 +54,15 @@ The {% data variables.copilot.github_copilot_app %} supports the following opera
 * **Chats:** Brainstorm in a conversation mode without creating a dedicated branch or workspace.
 * **Session history:** Use `/chronicle` to get insights from previous sessions, including work you started in the app.
 * **Canvases:** Open custom, agent-driven artifacts and interfaces where people and agents can collaborate.
-* **Computer use:** Allow local sessions on macOS and Windows to interact with desktop applications, including legacy and GUI-only software that do not provide an API, command-line interface, or MCP integration. For more information, see [AUTOTITLE](/copilot/concepts/agents/computer-use).
+* **Computer use:** Allow local sessions on macOS and Windows to interact with desktop applications, including legacy and GUI-only software that do not provide an API, command-line interface, or MCP integration. For more information, see [AUTOTITLE](/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/computer-use).
 
-## {% data variables.copilot.github_copilot_app %} workflow
+## The {% data variables.copilot.github_copilot_app %} workflow
+
+Connect a repository or local folder to the app, then start agent sessions to work on it. Sessions are grouped by repository in the sidebar.
 
 A typical workflow in the {% data variables.copilot.github_copilot_app %} looks like this:
 
-1. Browse issues in a repository and pick one up, or start from a blank workspace.
+1. Start a new agent session in a repository or local folder, or browse issues in a repository and start a session from an issue.
 1. Choose a session mode—Interactive, Plan, or Autopilot—and select a model.
 1. Describe the task and let the agent create a branch, write code, and run tests.
 1. Review the agent's changes, provide feedback, and iterate.
@@ -86,7 +92,7 @@ For {% data variables.copilot.copilot_business_short %} and {% data variables.co
 
 ## Public code
 
-{% data variables.copilot.github_copilot_app %} may generate code that is a match or near match of publicly available code, even if the "Suggestions matching public code" policy is set to "Block." See [AUTOTITLE](/copilot/how-tos/manage-your-account/manage-policies#enabling-or-disabling-suggestions-matching-public-code).
+The {% data variables.copilot.github_copilot_app %} may generate code that is a match or near match of publicly available code, even if the "Suggestions matching public code" policy is set to "Block." See [AUTOTITLE](/copilot/how-tos/manage-your-account/manage-policies#enabling-or-disabling-suggestions-matching-public-code).
 
 ## Further reading
 

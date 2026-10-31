@@ -30,7 +30,6 @@ const DEFAULT_OPTIONS = {
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'none'"],
-      prefetchSrc: ["'self'"],
       // Safari local development needs ws: for Next.js hot module reloading.
       connectSrc: ["'self'", 'https://collector.githubapp.com', isDev && 'ws:'].filter(
         Boolean,
@@ -40,13 +39,9 @@ const DEFAULT_OPTIONS = {
       objectSrc: ["'self'"],
       // Development webpack eval devtool needs unsafe-eval.
       // https://webpack.js.org/configuration/devtool/#devtool
-      scriptSrc: [
-        ...GITHUB_DOMAINS,
-        "'self'",
-        'data:',
-        colorModeScriptHash,
-        isDev && "'unsafe-eval'",
-      ].filter(Boolean) as string[],
+      scriptSrc: [...GITHUB_DOMAINS, "'self'", 'data:', isDev && "'unsafe-eval'"].filter(
+        Boolean,
+      ) as string[],
       scriptSrcAttr: ["'self'"],
       frameSrc: [
         ...GITHUB_DOMAINS,
@@ -88,6 +83,10 @@ devDirs.scriptSrcAttr.push("'unsafe-inline'")
 
 const STATIC_DEPRECATED_OPTIONS = structuredClone(DEFAULT_OPTIONS)
 STATIC_DEPRECATED_OPTIONS.contentSecurityPolicy.directives.scriptSrc.push("'unsafe-inline'")
+
+// Only the default policy gets the hash. Archived pages need 'unsafe-inline', which browsers
+// ignore when a hash is present, and archived HTML never includes this script.
+DEFAULT_OPTIONS.contentSecurityPolicy.directives.scriptSrc.push(colorModeScriptHash)
 
 const defaultHelmet = helmet(DEFAULT_OPTIONS)
 const nodeDeprecatedHelmet = helmet(NODE_DEPRECATED_OPTIONS)

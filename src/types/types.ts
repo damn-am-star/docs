@@ -41,6 +41,7 @@ export type PageFrontmatter = {
   subcategory?: boolean
   hidden?: boolean
   noEarlyAccessBanner?: boolean
+  hideSidebar?: boolean
   earlyAccessToc?: string
   layout?: string | boolean
   redirect_from?: string[]
@@ -171,6 +172,7 @@ export type Context = {
   currentProductName?: string
   productGroups?: ProductGroup[]
   featuredLinks?: FeaturedLinksExpanded
+  carousels?: Record<string, ResolvedArticle[]>
   renderedPage?: string
   renderedPageHast?: import('hast').Root
   miniTocItems?: MiniTocItem[]
@@ -339,6 +341,7 @@ export type Page = {
   children?: string[]
   introPlainText?: string
   noEarlyAccessBanner?: boolean
+  hideSidebar?: boolean
   communityRedirect?: {
     name: string
     href: string

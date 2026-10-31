@@ -20,16 +20,16 @@ docsTeamMetrics:
 
 When you prompt {% data variables.product.prodname_copilot_short %} to carry out a task it may choose to use one of your {% data variables.copilot.custom_agents_short %}, if {% data variables.product.prodname_copilot_short %} determines that the agent's expertise is a good fit for the task.
 
-Work performed by a {% data variables.copilot.copilot_custom_agent_short %} is carried out using a subagent, which is a temporary agent spun up to complete the task. The subagent has its own context window, which can be populated by information that is not relevant to the main agent. In this way, especially for larger tasks, parts of the work can be offloaded to {% data variables.copilot.custom_agents_short %}, without cluttering the main agent's context window. The main agent can then focus on higher-level planning and coordination.
+When the main agent delegates work to a {% data variables.copilot.copilot_custom_agent_short %}, that work is carried out by a subagent with its own context window. This lets the specialist focus on its assigned task without cluttering the main agent's context. You can also select a {% data variables.copilot.copilot_custom_agent_short %} for the session directly.
 
-For more information, see [AUTOTITLE](/copilot/concepts/agents/copilot-cli/about-custom-agents).
+For more information, see [AUTOTITLE](/copilot/concepts/customizations/custom-agents).
 
 ## Creating a {% data variables.copilot.copilot_custom_agent_short %}
 
 Each {% data variables.copilot.copilot_custom_agent_short %} is defined by a Markdown file with an `.agent.md` extension. You can create these files yourself, or you can add them from within the CLI, as described in the following steps.
 
 1. In interactive mode, enter `/agent`.
-1. Select **Create new agent** from the list of options.
+1. Press <kbd>N</kbd> to create a new agent.
 1. Choose between the options to create the {% data variables.copilot.copilot_custom_agent_short %} in the repository or in your home directory:
 
    * **Project** (`.github/agents/`)
@@ -98,7 +98,7 @@ Each {% data variables.copilot.copilot_custom_agent_short %} is defined by a Mar
   Enter `/agent` in interactive mode and choose from the list of available {% data variables.copilot.custom_agents_short %}. Then enter a prompt that will be passed to the selected agent.
 
   > [!NOTE]
-  > The CLI's default agents are not included in this list. For more information about the default agents, see [AUTOTITLE](/copilot/concepts/agents/copilot-cli/about-custom-agents#built-in-agents).
+  > The CLI's default agents are not included in this list. For more information about the default agents, see [AUTOTITLE](/copilot/concepts/customizations/custom-agents#built-in-agents).
 
 * **Explicit instruction**
 
@@ -134,6 +134,52 @@ Each {% data variables.copilot.copilot_custom_agent_short %} is defined by a Mar
 
   In this example, `security-auditor` is the ID of the {% data variables.copilot.copilot_custom_agent_short %}. The ID is derived from the file name, without the `.md` or `.agent.md` extension. In this case, the path to the file is either `agents/security-auditor.md` or `agents/security-auditor.agent.md`. If the file is in a subdirectory of `agents`, the subdirectory name is included in the ID, with the directory separator replaced with `--`. So an agent file at `agents/security/security-auditor.agent.md` would have the ID `security--security-auditor`. Alternatively, you can use the value of the `name` field instead of the ID, enclosing it in quotes. For example, `--agent "Security Auditor"`.
 
+## Delegating focused tasks to a specific model
+
+You can configure a {% data variables.copilot.copilot_custom_agent_short %} to use a specific model.
+
+This can be particularly useful when you want to delegate small, well-defined tasks to a {% data variables.copilot.copilot_custom_agent_short %} that uses a locally hosted model, while using a cloud-based model for your main session. This approach allows you, for example, to delegate a single-file change or a focused test fix to a {% data variables.copilot.copilot_custom_agent_short %} that uses a local model, then have the main agent review the result.
+
+First, add a locally hosted model to the CLI. See [AUTOTITLE](/copilot/how-tos/copilot-cli/customize-copilot/add-llm-models).
+
+1. Create `~/.copilot/agents/local-coder.agent.md` with the following content:
+
+   ```markdown
+   ---
+   name: local-coder
+   description: >
+     Use for small, well-defined coding tasks, such as a
+     single-file change or a focused test fix.
+   model: LOCAL-PROVIDER/LOCAL-MODEL
+   model-policy: required
+   tools: ["read", "grep", "glob", "edit", "execute"]
+   strict-tools-list: true
+   include-custom-instructions: true
+   ---
+
+   Complete only the requested task. Inspect the relevant
+   code, make the smallest correct change, and run focused
+   checks. Report what changed and any remaining issues.
+   ```
+
+1. Replace `LOCAL-PROVIDER/LOCAL-MODEL` with your local model's provider-qualified ID, not its display name. For a model in `providers.json`, combine the model entry's `provider` and `id` values, separated by a forward slash. For example, `"provider": "local"` and `"id": "qwen3:8b"` gives you `local/qwen3:8b`.
+
+   `model-policy: required` requires the configured model rather than treating it as a preference.
+
+   `strict-tools-list: true` limits the agent to the listed tool groups without adding the usual default tools.
+
+   `include-custom-instructions: true` keeps your repository's instructions in effect for the subagent.
+
+1. Restart the CLI to load the agent. In a session using a cloud model, explicitly delegate a bounded task:
+
+   ```copilot
+   Use the local-coder agent to add an empty-input test for
+   parseConfig in src/config.test.ts. Do not change other
+   files. Then review the result in the main session.
+   ```
+
+   The local model runs the delegated task, but the main agent still receives the result. This does not make the whole session local or offline.
+
 ## Applying your repository's custom instructions to a {% data variables.copilot.copilot_custom_agent_short %}
 
 Custom instruction files—such as `.github/copilot-instructions.md`, `AGENTS.md`, and `CLAUDE.md`—tell {% data variables.product.prodname_copilot_short %} how to work in your repository. For more information, see [AUTOTITLE](/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions).
@@ -160,7 +206,7 @@ For more information, including how this setting interacts with the `--no-custom
 
 ## Further reading
 
-* [AUTOTITLE](/copilot/concepts/agents/copilot-cli/comparing-cli-features)
+* [AUTOTITLE](/copilot/concepts/customizations/comparing-customizations)
 * [AUTOTITLE](/copilot/reference/custom-agents-configuration)
 * [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#custom-agents-reference)
 * [AUTOTITLE](/copilot/tutorials/customization-library/custom-agents)—a curated collection of examples

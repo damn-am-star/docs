@@ -39,7 +39,6 @@ export const DefaultLayout = (props: Props) => {
   const {
     error,
     isHomepageVersion,
-    currentPathWithoutLanguage,
     currentVersion,
     currentProduct,
     relativePath,
@@ -136,8 +135,7 @@ export const DefaultLayout = (props: Props) => {
       <Head>
         {error === '404' ? (
           <title>{t('oops')}</title>
-        ) : (!isHomepageVersion && page.fullTitle) ||
-          (currentPathWithoutLanguage.includes('enterprise-server') && page.fullTitle) ? (
+        ) : page.fullTitle && !(isHomepageVersion && currentVersion === 'free-pro-team@latest') ? (
           <title>{page.fullTitle}</title>
         ) : null}
 
@@ -221,7 +219,7 @@ export const DefaultLayout = (props: Props) => {
       >
         Skip to main content
       </a>
-      <SidebarCollapseProvider initialCollapsed={mainContext.sidebarCollapsed}>
+      <SidebarCollapseProvider>
         <Header isNarrowMenuOpen={isNarrowMenuOpen} onNarrowMenuToggle={setIsNarrowMenuOpen} />
         <div inert={isNarrowMenuOpen} aria-hidden={isNarrowMenuOpen || undefined}>
           <ClientSideLanguageRedirect />
@@ -278,13 +276,14 @@ type LayoutBodyProps = {
 }
 const LayoutBody = ({ children, hasDrawer }: LayoutBodyProps) => {
   const { collapsed, mobileNavOpen } = useSidebarCollapsed()
-  const { currentProduct } = useMainContext()
+  const { currentProduct, page } = useMainContext()
   const isSearchResultsPage = currentProduct?.id === 'search'
+  const hideSidebar = page?.hideSidebar && !isSearchResultsPage
   const miniTocItems = useMiniTocItems()
   const hasSubBar = miniTocItems.length > 1
   return (
     <div className={cx('d-lg-flex', isSearchResultsPage && styles.searchColumns)}>
-      {collapsed && !mobileNavOpen && !isSearchResultsPage ? null : (
+      {hideSidebar || (collapsed && !mobileNavOpen && !isSearchResultsPage) ? null : (
         <SidebarNav mobileOpen={mobileNavOpen} />
       )}
       <div
@@ -295,7 +294,7 @@ const LayoutBody = ({ children, hasDrawer }: LayoutBodyProps) => {
           hasSubBar &&
             hasDrawer &&
             (collapsed ? styles.stickyStackYieldsWhenCollapsed : styles.stickyStackYieldsAtXxl),
-          mobileNavOpen && styles.contentHiddenForNav,
+          mobileNavOpen && !hideSidebar && styles.contentHiddenForNav,
         )}
       >
         <main id="main-content" className={styles.mainContent}>

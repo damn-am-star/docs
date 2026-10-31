@@ -16,7 +16,7 @@ docsTeamMetrics:
 
 {% data reusables.copilot.copilot-cli.cli-help-note %}
 
-For an overview of what plugins are and how they work across {% data variables.product.prodname_copilot_short %} clients, see [AUTOTITLE](/copilot/concepts/agents/about-plugins).
+For an overview of what plugins are and how they work across {% data variables.product.prodname_copilot_short %} clients, see [AUTOTITLE](/copilot/concepts/customizations/plugins).
 
 ## CLI commands
 
@@ -43,6 +43,8 @@ Before `copilot plugin` was split into separate commands by resource, `copilot p
 > A plugin or marketplace pinned by an organization or MDM managed policy (`enabledPlugins`, `extraKnownMarketplaces`) can't be re-enabled, disabled, or repointed locally—the managed value wins for that entry. The `/plugin` dashboard marks these rows with a `Managed` badge and refuses a conflicting toggle. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-config-dir-reference#mdm-managed-settings).
 >
 > A plugin whose activation is currently decided by the current repository's `enabledPlugins` overlay rejects `copilot plugin enable`/`disable` instead of silently persisting a global value that would have no effect in that repository. The error names the settings file that actually controls the plugin. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-config-dir-reference#repository-settings-githubcopilotsettingsjson).
+
+Unlike managed requirements, repository defaults can be turned off with an explicit entry in repository-local settings. Managed required or blocked entries always take precedence. See [AUTOTITLE](/copilot/how-tos/copilot-cli/customize-copilot/plugins-finding-installing#turn-off-a-repository-default).
 
 ### Plugin specification for `install` command
 
@@ -89,7 +91,10 @@ MCP servers install from a policy-configured registry, which requires authentica
 > [!NOTE]
 > Path-sourced plugins in a local (directory-source) marketplace load live from their real directory—editing one takes effect on `/restart` or in a new session, with no `copilot plugin update` needed.
 
-First-party plugins—those installed from the built-in `copilot-plugins` and `awesome-copilot` marketplaces—automatically update at the start of each session in a trusted working directory. Disable this behavior with the `autoUpdate` setting (set to `false`) or the `COPILOT_AUTO_UPDATE=false` environment variable. Auto-update is also skipped by default in CI. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-config-dir-reference#configuration-file-settings).
+First-party plugins—those installed from the built-in `awesome-copilot` marketplace—automatically update at the start of each session in a trusted working directory. Disable this behavior with the `autoUpdate` setting (set to `false`) or the `COPILOT_AUTO_UPDATE=false` environment variable. Auto-update is also skipped by default in CI. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-config-dir-reference#configuration-file-settings).
+
+> [!NOTE]
+> `copilot-plugins` previously shipped as a second built-in default marketplace alongside `awesome-copilot`. It's now an ordinary, non-default marketplace (`github/copilot-plugins`) that you register yourself with `copilot plugin marketplace add github/copilot-plugins`. If you installed plugins from it before this change, a one-time migration adds it to your own `extraKnownMarketplaces` with `autoUpdate: true` so those plugins keep updating. A fresh install that never used `copilot-plugins` must register it manually before installing plugins from it.
 
 A marketplace you've added yourself can opt into the same session-start auto-update by setting `autoUpdate: true` on its `extraKnownMarketplaces` entry in your user settings. This opt-in applies only to interactive and `-p` sessions—SDK and server sessions don't auto-update. It is honored from your own user settings or from managed (MDM/server) settings, but a repository-level `autoUpdate` setting is accepted and ignored—it can't enable or redirect auto-update for a marketplace. On a same-name collision, a built-in first-party marketplace wins, then a managed entry (which replaces the whole same-named user entry, so a managed entry without `"autoUpdate": true` removes the user's opt-in), then the user's own entry. See [Repository settings](/copilot/reference/copilot-cli-reference/cli-config-dir-reference#repository-settings-githubcopilotsettingsjson).
 
@@ -97,21 +102,23 @@ In interactive mode, `/plugin` flags an installed plugin or marketplace when a n
 
 ### `copilot plugin marketplace` (alias `marketplaces`) subcommands
 
-Built-in default marketplaces ship with the runtime and can't be removed.
+The built-in `awesome-copilot` default marketplace ships with the runtime and can't be removed.
 
 | Subcommand              | Description                                                                 |
 |--------------------------|-------------------------------------------------------------------------------|
-| `list [--json]`         | List every registered marketplace, including built-in defaults               |
+| `list [--json]`         | List every registered marketplace, including the built-in default            |
 | `add SOURCE`            | Add a marketplace (`owner/repo`, `owner/repo#ref`, a URL, or a local path)    |
 | `remove NAME [--force]` | Remove a marketplace; `--force` also uninstalls plugins sourced from it   |
 | `browse NAME [--json]`  | List the plugins offered by a marketplace's catalog                        |
 | `update [NAME]` (alias `refresh`) | Refresh the plugin catalog for one marketplace, or all if `NAME` is omitted |
 
+When HTTPS authentication fails for a remote marketplace or plugin fetch, the CLI retries once with your signed-in {% data variables.product.github %} token. If the retry also fails, run `/login`.
+
 In interactive mode, run `/plugin marketplace update [NAME]` (alias `/plugin marketplace refresh`), or press <kbd>R</kbd> in the **Marketplace** view of the `/plugin` dashboard, to refresh every registered marketplace's catalog.
 
 ## `plugin.json`
 
-All plugins consist of a plugin directory containing a manifest file named `plugin.json`. Agent Plugins requires the manifest at the plugin root. A root `plugin.json` that targets Agent Plugins takes precedence over `.plugin/plugin.json` and `.claude-plugin/plugin.json` per spec §5.1. Legacy plugins support the alternative locations listed in [File locations](#file-locations). See [AUTOTITLE](/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating).
+All plugins consist of a plugin directory containing a manifest file named `plugin.json`. Agent Plugins requires the manifest at the plugin root. A root `plugin.json` that targets Agent Plugins takes precedence over `.plugin/plugin.json` and `.claude-plugin/plugin.json` per spec §5.1. Legacy plugins support the alternative locations listed in [File locations](#file-locations). For shared format details, see [AUTOTITLE](/copilot/reference/plugin-and-marketplace-reference). For CLI authoring guidance, see [AUTOTITLE](/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating).
 
 {% data variables.copilot.copilot_cli_short %} supports both the legacy plugin manifest and the Agent Plugins manifest. {% data variables.copilot.copilot_cli_short %} recognizes the canonical `$schema` values for Agent Plugins (Open Plugin Spec) v1.0.0 (`https://agent-plugins.org/schemas/1.0.0/plugin.schema.json`) and v1.1.0 (`https://agent-plugins.org/schemas/1.1.0/plugin.schema.json`), opting a plugin into Agent Plugins semantics. A manifest without one of these exact values uses the legacy format and loads as before. If a plugin declares an Agent Plugins version that {% data variables.copilot.copilot_cli_short %} doesn't support, the CLI rejects the plugin instead of silently falling back to legacy mode. A rejected plugin contributes no hooks, LSP servers, MCP servers, skills, commands, agents, rules, or extension directories.
 
@@ -210,6 +217,22 @@ These tell the CLI where to find your plugin's components. All are optional. The
 | `mcpServers`| string \| object   | —          | Path to an MCP configuration file (e.g., `.mcp.json`), or inline server definitions. |
 | `lspServers`| string \| object   | —          | Path to an LSP configuration file, or inline server definitions. |
 
+For example, a legacy plugin using the default locations can have this structure:
+
+```text
+my-plugin/
+├── plugin.json
+├── agents/
+│   └── helper.agent.md
+├── skills/
+│   └── deploy/
+│       └── SKILL.md
+├── hooks.json
+└── .mcp.json
+```
+
+You can use additional manifest locations and configure component paths. For all supported paths and discovery order, see [File locations](#file-locations).
+
 #### Plugin-shipped agent MCP servers
 
 An agent bundled inside a plugin can declare its own `mcp-servers` in its frontmatter, scoping an MCP server to just that agent instead of exposing it through the plugin's shared `mcpServers` configuration. Within that `mcp-servers` block, `${PLUGIN_ROOT}` (or its `${CLAUDE_PLUGIN_ROOT}`/`${COPILOT_PLUGIN_ROOT}` aliases) expands to the plugin's root directory, so the server's `command` or `args` can point at a script bundled with the plugin:
@@ -288,7 +311,7 @@ copilot plugin marketplace add /PATH/TO/my-marketplace
 {% data reusables.copilot.copilot-cli.cli-claude-plugin-dir %}
 
 
-For more information, see [AUTOTITLE](/copilot/how-tos/copilot-cli/customize-copilot/plugins-marketplace).
+For more information, see [AUTOTITLE](/copilot/how-tos/copilot-on-github/customize-copilot/create-and-share-plugin-marketplaces).
 
 ### Example `marketplace.json` file
 

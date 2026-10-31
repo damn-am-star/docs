@@ -13,7 +13,21 @@ docsTeamMetrics:
   - copilot-cli
 ---
 
-The Model Context Protocol (MCP) is an open standard that defines how applications share context with large language models (LLMs). You can connect MCP servers to {% data variables.copilot.copilot_cli %} to give {% data variables.product.prodname_copilot_short %} access to external tools, data sources, and services. For an overview of MCP, see [AUTOTITLE](/copilot/concepts/context/mcp).
+The Model Context Protocol (MCP) is an open standard that defines how applications share context with large language models (LLMs). You can connect MCP servers to {% data variables.copilot.copilot_cli %} to give {% data variables.product.prodname_copilot_short %} access to external tools, data sources, and services. For an overview of MCP, see [AUTOTITLE](/copilot/concepts/customizations/mcp).
+
+## Connecting services
+
+> [!NOTE]
+> {% data reusables.copilot.connectors-public-preview %}
+
+Connect an external service once to give {% data variables.product.prodname_copilot_short %} access to its tools and context. You can then use the connection across supported {% data variables.product.prodname_copilot_short %} surfaces without repeating setup or signing in separately in each one. {% data variables.product.github %} handles MCP server configuration and authentication for you.
+
+If your organization or enterprise provides your {% data variables.product.prodname_copilot_short %} subscription, an administrator may need to update its policies to allow connectors. See [AUTOTITLE](/copilot/concepts/customizations/copilot-connectors).
+
+1. In an interactive CLI session, enter `/mcp` to open the MCP server dashboard.
+1. Use the <kbd>←</kbd> and <kbd>→</kbd> keys to switch to the **Connectors** view.
+1. Select a connector, press <kbd>Enter</kbd>, then select **Connect**.
+1. Follow the prompts to sign in to the service and approve access.
 
 ## Adding an MCP server
 
@@ -205,6 +219,13 @@ If your organization has configured a custom MCP registry URL, `/mcp search` con
 1. Press <kbd>Ctrl</kbd>+<kbd>S</kbd> to save. The server is added to your `mcp-config.json` and started immediately.
 
 
+## Using agent finder
+
+Agent finder searches a catalog of capabilities, including MCP servers, tools, agents, and skills. To make it available in the CLI:
+
+1. Download the [agent finder skill](https://github.com/ards-project/connectors/blob/main/skills/github-copilot/SKILL.md).
+1. Add the skill to your `~/.copilot/skills` directory. For skill directory structure and installation guidance, see [AUTOTITLE](/copilot/how-tos/copilot-cli/customize-copilot/add-skills).
+
 ## Managing MCP servers
 
 You can manage your configured MCP servers using the `/mcp` commands in interactive mode or the `copilot mcp` subcommands from the terminal.
@@ -271,6 +292,6 @@ Once you have added an MCP server, {% data variables.product.prodname_copilot_sh
 
 ## Further reading
 
-* [AUTOTITLE](/copilot/concepts/context/mcp)
+* [AUTOTITLE](/copilot/concepts/customizations/mcp)
 * [AUTOTITLE](/copilot/how-tos/copilot-in-your-ide/customize-copilot/extend-copilot-with-tools-and-context/extend-copilot-chat-with-mcp)
 * [AUTOTITLE](/copilot/how-tos/copilot-on-github/customize-copilot/configure-mcp-servers)

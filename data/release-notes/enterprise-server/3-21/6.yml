@@ -50,7 +50,7 @@ sections:
     - |
       The first user created via SAML-JIT during first-run bootstrap on a fresh GHES appliance was not added as an Enterprise owner.
     - |
-      Enterprise Managed Users could remain absent from enterprise membership listings and the `enterprise.members` GraphQL response after being reinstated.
+      After a user account was unsuspended, the user could remain missing from the enterprise member list and the results of GraphQL queries using `enterprise.members`. [Updated: 2026-10-30]
     - |
       On the secret scanning metrics page for a large enough enterprise, the page could time out.
     - |
@@ -71,6 +71,8 @@ sections:
       On an instance using Redis 7, AOF (append-only file) recovery did not detect or repair corruption in Redis data volumes. This occurred because recovery only checked the legacy single-file AOF path and did not account for Redis 7s multi-part AOF format, which uses a manifest to track data across multiple files.
     - |
       When an administrator ran a configured restore that changed the appliances identity (UUID), the restore could skip the storage tier and still report success, resulting in an incomplete restore of repository data.
+    - |
+      {% data reusables.release-notes.2026-10-merge-bypass-required-status-checks %} [Updated: 2026-10-07]
   changes:
     - |
       Enterprise Live Migrations skip branch protection rules by default because only part of each rule can be migrated. Partial migration of branch protection rules is opt in with `ghe-config app.elm-exporter.migrate-protected-branches true`.
@@ -100,8 +102,6 @@ sections:
     - |
       When initializing a new GHES cluster, nodes with the `consul-server` role should be added to the cluster before adding additional nodes. Adding all nodes simultaneously creates a race condition between nomad server registration and nomad client registration.
     - |
-      When initializing a new GHES cluster, nodes with the `consul-server` role should be added to the cluster before adding additional nodes. Adding all nodes simultaneously creates a race condition between nomad server registration and nomad client registration.
-    - |
       In a cluster, the host running restore requires access the storage nodes via their private IPs.
     - |
       On an instance hosted on Azure, commenting on an issue via email meant the comment was not added to the issue.
@@ -122,6 +122,6 @@ sections:
     - |
       In clustered GitHub Enterprise Server environments, administrators may find that nodes that remain in the cluster but no longer have the `git-server`, `pages-server`, or `storage-server` role remain online and eligible to vote in the corresponding replication tables. Review role-specific replication state and contact GitHub Support if stale rows affect replication.
     - |
-      _When restoring an instance with `ghe-restore` while the replication controller is enabled, the storage directory is not restored._
+      When an administrator uses {% data variables.product.prodname_enterprise_backup_utilities %} to restore a backup to a configured standalone instance with Replication Controller enabled, which is the default in {% data variables.product.prodname_ghe_server %} 3.21, `ghe-restore` may skip storage data, such as avatars and attachments, and still complete successfully. The restore output includes `Warning: no routes found, skipping storage restore ...`. Restores with {% data variables.product.prodname_enterprise_backup_service %} on {% data variables.product.prodname_ghe_server %} 3.21.6 or later aren't affected. If you see this warning or storage data is missing after a restore, contact {% data variables.contact.github_support %}. [Updated: 2026-10-22]
     - |
       _On a newly booted {% data variables.product.prodname_ghe_server %} instance, the merge box on a newly created pull request can stay on "Checking for the ability to merge automatically" and not show the merge status. If encountered, refreshing the page shows the correct merge status._

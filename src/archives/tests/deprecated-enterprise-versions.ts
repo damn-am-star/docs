@@ -43,6 +43,16 @@ describe('enterprise deprecation', () => {
     )
   })
 
+  test('redirects double-slash paths in deprecated enterprise content to the collapsed path', async () => {
+    const res = await get('/en/enterprise-server@3.5//admin/overview')
+    expect(res.statusCode).toBe(301)
+    expect(res.headers.location).toBe('/en/enterprise-server@3.5/admin/overview')
+
+    const res2 = await get('/en/enterprise/2.15/user//articles/about-branches')
+    expect(res2.statusCode).toBe(301)
+    expect(res2.headers.location).toBe('/en/enterprise/2.15/user/articles/about-branches')
+  })
+
   test('handles requests for deprecated Enterprise pages ( >=2.13 )', async () => {
     expect(enterpriseServerReleases.deprecated.includes('2.13')).toBe(true)
     const { $, res } = await getDOM('/en/enterprise/2.13/user/articles/about-branches')
@@ -56,6 +66,23 @@ describe('enterprise deprecation', () => {
     expect(res.headers['x-robots-tag']).toBe('noindex')
     expect(res.headers['surrogate-key']).toBe(SURROGATE_ENUMS.MANUAL)
     expect(res.headers['set-cookie']).toBeUndefined()
+  })
+
+  test('does not put request host headers into deprecated Enterprise pages ( 3.2-3.9 )', async () => {
+    const res = await get(
+      '/en/enterprise-server@3.5/admin/overview/about-github-enterprise-server',
+      {
+        headers: {
+          'x-host': 'evil.example"><script>alert(1)</script>',
+          'x-forwarded-host': 'evil.example',
+          'x-forwarded-proto': 'javascript',
+        },
+      },
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.body).not.toContain('evil.example')
+    expect(res.body).not.toContain('javascript://')
+    expect(res.body).toContain('src="/enterprise-server@3.5/_next/')
   })
 
   test('handles requests for deprecated Enterprise pages ( <2.13 )', async () => {

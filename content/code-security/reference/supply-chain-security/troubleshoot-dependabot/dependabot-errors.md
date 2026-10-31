@@ -70,7 +70,7 @@ Every application that has dependencies has a dependency graph, that is, a direc
 
 **Error message:** `{% data variables.product.prodname_dependabot %} tries to update dependencies without an alert`
 
-{% data variables.product.prodname_dependabot %} updates explicitly defined transitive dependencies that are vulnerable for all ecosystems. For npm, {% data variables.product.prodname_dependabot %} will raise a pull request that also updates the parent dependency if it's the only way to fix the transitive dependency.
+{% data variables.product.prodname_dependabot %} updates explicitly defined transitive dependencies that are vulnerable for all ecosystems. For npm, {% data variables.product.prodname_dependabot %} will raise a pull request that also updates the parent dependency if it's the only way to fix the transitive dependency. For NuGet projects that use `PackageReference`, {% data variables.product.prodname_dependabot %} first tries to update the parent dependency. If no compatible parent update is available, it adds a direct reference that pins the transitive dependency to the secure version.
 
 For example, a project with a dependency on `A` version `~2.0.0` which has a transitive dependency on `B` version `~1.0.0` which has resolved to `1.0.1`.
 
@@ -289,7 +289,7 @@ Update jobs can only reach hosts on {% data variables.product.prodname_dependabo
 
 **Resolution:** Choose the option that matches the blocked host:
 
-* For a private or organization-specific registry, define it under the top-level `registries` key in your `dependabot.yml` file. Reference it from the relevant `updates` entry to allow it for that job. Do this even if the registry allows anonymous access, and note that defining it only in a file such as `.npmrc` or `nuget.config` does not allow its host.
+* For a private or organization-specific registry, define it under the top-level `registries` key in your `dependabot.yml` file. Reference it from the relevant `updates` entry to allow it for that job. Do this even if the registry allows anonymous access, and note that defining it only in a file such as `.npmrc` or `nuget.config` does not allow its host.{% ifversion org-private-registry-anonymous %} Alternatively, an organization owner can add the registry at the organization level, using the **Anonymous** authentication method if the registry doesn't require authentication.{% endif %}
 * For a public registry or download host, propose adding it to the default allowlist.
 
 For more information, see [AUTOTITLE](/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security/resolve-a-blocked-host).

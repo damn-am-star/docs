@@ -71,7 +71,7 @@ We'll create a time-tracking app in a new {% data variables.product.github %} re
 1. Choose a model from the models dropdown.
 
    > [!NOTE]
-   > The responses referred to in this tutorial were received while using {% data variables.copilot.copilot_claude_sonnet_45 %}, which has since been retired. Other models will respond differently, but you should get roughly similar results.
+   > The responses referred to in this tutorial were received while using {% data variables.copilot.claude_sonnet_45 %}, which has since been retired. Other models will respond differently, but you should get roughly similar results.
    >
    > Set the model to **Auto**, or select a model of your choice.
 
@@ -184,7 +184,7 @@ You can now start planning for an initial implementation of your application. It
 
 1. Keep your chat conversation open, as {% data variables.product.prodname_copilot_short %} will use this in the next series of steps.
 
-## Building your application with {% data variables.copilot.copilot_cloud_agent %}
+## Building your application with {% data variables.product.prodname_copilot_short %}
 
 When you think the plan contains enough detail:
 

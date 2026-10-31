@@ -1,5 +1,5 @@
 ---
-title: Controlling who can execute {% data variables.product.prodname_actions %} workflows
+title: Governing execution of {% data variables.product.prodname_actions %} workflows
 shortTitle: Control workflow execution
 intro: Control who can trigger {% data variables.product.prodname_actions %} workflows and which events are permitted to run them across an enterprise, organization, and repository.
 versions:
@@ -15,7 +15,7 @@ product: 'All public repositories, and private repositories on {% data variables
 
 {% data reusables.actions.actions-policies-about-body %} For more information, see [AUTOTITLE](/actions/concepts/about-actions-policies).
 
-<!-- expires 2026-11-02 -->
+<!-- expires 2026-12-02 -->
 
 {% ifversion default-pull-req-target-policy %}
 
@@ -23,7 +23,7 @@ product: 'All public repositories, and private repositories on {% data variables
 
 {% endif %}
 
-<!-- end expires 2026-11-02 -->
+<!-- end expires 2026-12-02 -->
 
 ## Preparing to add protections
 
@@ -77,6 +77,24 @@ Only the allowed actors will be able to run the specified workflows in the targe
 ### Restrict events
 
 Event rules control which events are permitted, such as `push`, `pull_request`, `pull_request_target`, and `workflow_dispatch`.
+
+{% ifversion actions-workflow-lockfiles %}
+
+### Require lockfile
+
+The **Require lockfile** protection blocks runs of targeted workflows that aren't onboarded to the repository's lockfile. This way, the targeted workflows run vetted, predictable code, instead of whatever a tag or branch points to at run time. This protection, and lockfiles in general, only cover actions called at the step level (`jobs.<job_id>.steps[*].uses`). They don't cover reusable workflows called at the job level (`jobs.<job_id>.uses`). If a called reusable workflow isn't onboarded to the lockfile in its own repository, this protection blocks the calling workflow's run. See [AUTOTITLE](/actions/concepts/security/workflow-dependency-lockfiles).
+
+Generate and verify lockfiles in the repositories you're targeting before you set this protection to **Active**. Otherwise, you'll block workflow runs in repositories that aren't ready. For a staged rollout, see [AUTOTITLE](/actions/how-tos/administer/enforce-workflow-lockfiles).
+
+You can keep the separate **Require actions to be pinned to a full-length commit SHA** policy enabled when adopting lockfiles. A lockfile satisfies the SHA-pinning requirement for workflows that are onboarded to a lockfile.
+
+Both policies are independent checks, and a workflow run must pass both when they're both enabled:
+
+* A workflow that is in the lockfile passes both policies, with no SHAs needed in the workflow file.
+* A workflow that isn't in the lockfile, with `uses:` references pinned to a full-length commit SHA, passes SHA pinning but is blocked by **Require lockfile**.
+* A workflow that isn't in the lockfile, with `uses:` references to a tag or branch, is blocked by both policies.
+
+{% endif %}
 
 ## Evaluating policies
 

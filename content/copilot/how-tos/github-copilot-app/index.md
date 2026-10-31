@@ -18,11 +18,13 @@ redirect_from:
 children:
   - /customize-github-copilot-app
   - /agent-sessions
+  - /choose-a-model
+  - /working-with-projects
   - /computer-use
-  - /configure-local-sandboxing
   - /working-with-canvas-extensions
+  - /view-and-fix-security-alerts
   - /managing-issues-and-pull-requests
   - /using-automations
-  - /use-byok-models
+  - /add-llm-models
   - /open-with-deep-links
 ---

@@ -462,7 +462,7 @@ Specify your own labels for all pull requests raised for a package manager.  For
 {% data variables.product.prodname_dependabot %} default behavior:
 
 * All pull requests have a `dependencies` label.
-* If you define more than one package manager, an additional label for the ecosystem or language is added to each pull request. For example: `java` for Gradle updates and `submodules` for git submodule updates.
+* An additional label for the ecosystem or language is added to each pull request, including when you define only one package manager. For example: `java` for Gradle updates and `submodules` for git submodule updates.
 * If semantic version (SemVer) labels are present in the repository, they will be applied automatically to indicate the type of version update (`major`, `minor`, or `patch`).
 * {% data variables.product.prodname_dependabot %} creates these default labels automatically, as necessary in your repository.
 
@@ -542,12 +542,14 @@ Change the limit on the maximum number of pull requests for version updates open
 * If five pull requests with version updates are open, no further pull requests are raised until some of those open requests are merged or closed.
 
 > [!NOTE]
-> _Security update_ pull requests are not subject to this limit and do not count toward it. There is no limit on the number of open pull requests for security updates.
+> _Security update_ pull requests are subject to a separate, fixed limit of 10 open pull requests, which cannot be configured using `open-pull-requests-limit`.
 
 When `open-pull-requests-limit` is defined:
 
 * {% data variables.product.prodname_dependabot %} opens pull requests up to the defined integer value. A large value can be set to effectively remove the open pull request limit.
 * You can temporarily disable version updates for a package manager by setting this option to zero, see [Disabling {% data variables.product.prodname_dependabot_version_updates %}](/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/configure-version-updates#disabling-dependabot-version-updates).
+
+When either limit is reached, {% data variables.product.prodname_dependabot %} reports an error and stops opening additional pull requests until some of the open pull requests are merged or closed. For more information, see [AUTOTITLE](/code-security/reference/supply-chain-security/troubleshoot-dependabot/dependabot-errors#pull-request-limit-reached).
 
 ## `package-ecosystem` {% octicon "versions" aria-label="Version updates only" height="24" %}
 
@@ -588,7 +590,7 @@ Package manager | YAML value      | Supported versions |
 | {% ifversion dependabot-nix-support %} |
 | Nix flakes | `nix`            | Not applicable   |
 | {% endif %} |
-| npm            | `npm`            |  v7, v8, v9, v10, v11   |
+| npm            | `npm`            | v7, v8, v9, v10, v11{% ifversion dependabot-npm12-pnpm11-pnpm12-bun14 %}, v12{% endif %} |
 | NuGet          | `nuget`          | <=6.12.0 |
 | {% ifversion dependabot-opentofu-support %} |
 | OpenTofu     | `opentofu`       | Not applicable     |
@@ -596,7 +598,7 @@ Package manager | YAML value      | Supported versions |
 | pip         | `pip`            | 26.1.1             |
 | pip-compile | `pip`            | 7.5.3            |
 | pipenv      | `pip`            | 2024.4.1      |
-| pnpm   | `npm`            | v7, v8, v9, v10   |
+| pnpm        | `npm` | v7, v8, v9, v10{% ifversion dependabot-npm12-pnpm11-pnpm12-bun14 %}, v11, v12{% endif %} |
 | poetry      | `pip`    | v2    |
 | {% ifversion dependabot-pre-commit-support %} |
 | pre-commit | `pre-commit` | Not applicable |

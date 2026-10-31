@@ -59,9 +59,9 @@ This is the primary configuration file for {% data variables.copilot.copilot_cli
 By default, this file is located in the `~/.copilot` directory, which is the user-level configuration directory. It contains global user-level defaults for all repositories. You can change the location of this directory by setting the `COPILOT_HOME` environment variable to a different path.
 
 > [!NOTE]
-> User-editable settings were originally stored in `config.json`. They have been moved to `settings.json`. Any user settings present in `config.json` on startup are automatically migrated to `settings.json`.
+> User-editable settings are stored in `settings.json`. These settings were originally stored in `config.json`. Any user settings in `config.json` are ignored. That file is used to store internal state, such as installed plugins and trusted folders.
 
-If `settings.json` fails to read, parse, or validate, {% data variables.copilot.copilot_cli_short %} ignores the invalid values (recognized `config.json` values are still merged in) and shows a startup warning on the timeline directing you to the **Problems** tab of the `/settings` command. Open that tab to see the specific error, then fix the reported issue to restore the affected settings.
+If `settings.json` fails to read, parse, or validate, {% data variables.copilot.copilot_cli_short %} ignores the invalid values and shows a startup warning on the timeline directing you to the **Problems** tab of the `/settings` command. Open that tab to see the specific error, then fix the reported issue to restore the affected settings.
 
 If `settings.json` contains a top-level key that isn't a recognized setting (for example, a typo), {% data variables.copilot.copilot_cli_short %} lists it in the **Problems** tab of the `/settings` command instead of on the timeline or in stderr. The tab's label shows a count (for example, `Problems (2)`) when any configuration scope has an issue. `$schema` is tolerated and never reported.
 
@@ -71,6 +71,8 @@ For the full list of settings and how they interact with repository-level config
 
 > [!TIP]
 > Run `copilot help config` in your terminal for a quick reference.
+
+Use `copilot config` from your shell, outside a session, to read or change settings non-interactively—the scripting counterpart to the `/settings` slash command. Add `--repo` or `--local` to target `.github/copilot/settings.json` or `.github/copilot/settings.local.json` instead of your user settings file; only [repo-overridable keys](#repository-settings-githubcopilotsettingsjson) can be written there. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#using-copilot-config) for the full command reference.
 
 ### `copilot-instructions.md`
 
@@ -99,6 +101,274 @@ For more information, see [AUTOTITLE](/copilot/how-tos/copilot-cli/set-up-copilo
 Defines a registry of bring-your-own-key (BYOK) providers and models, as a JSON object with `providers` and `models` keys. When this file declares any provider or model, it takes precedence over the legacy `COPILOT_PROVIDER_*` environment variables.
 
 By default, this file is located at `~/.copilot/providers.json`. Override its location with the `COPILOT_PROVIDERS_CONFIG` environment variable.
+
+Models in this file are available alongside the models provided by your {% data variables.product.prodname_copilot_short %} subscription. After editing the file manually, restart {% data variables.copilot.copilot_cli_short %} to load your changes. For setup instructions, see [AUTOTITLE](/copilot/how-tos/copilot-cli/customize-copilot/add-llm-models).
+
+> [!WARNING]
+> API keys, bearer tokens, and header values in this file are stored as plain text. Do not commit the file to a repository or share it without removing credentials. Values such as `$MY_API_KEY` are literal strings, not references to environment variables.
+
+#### Provider configuration structure
+
+Use a JSON object, without comments or trailing commas. The file contains two arrays. Each provider defines a connection, and each model refers to one of those providers by name. In the tables below, `[]` means an entry in an array. For example, `models[].capabilities.supports.vision` is the `vision` setting inside `supports`, inside `capabilities`, inside a model entry.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `providers` | Array of objects | No | `[]` | Provider connections. See [Provider settings](#provider-settings). |
+| `models` | Array of objects | No | `[]` | Models available through those connections. See [Model settings](#model-settings). |
+
+An absent or empty file, or a file with no provider or model entries, allows the CLI to fall back to `COPILOT_PROVIDER_*` environment variables. A `null` value for either array is treated as an empty array. A file with invalid JSON or invalid provider or model entries produces a configuration error instead.
+
+To use a configured model when starting the CLI, pass `PROVIDER-NAME/MODEL-ID` to the `--model` option. `PROVIDER-NAME` is the provider's `name` value, and `MODEL-ID` is the model's `id` value. For example, run `copilot --model local/qwen3:8b`. Alternatively, during an interactive session, you can enter `/model` and choose the model from the picker.
+
+This file configures connections, model capabilities, and model instructions for use in {% data variables.copilot.copilot_cli_short %}. The JSON in this file is not a provider API request body. Settings are not passed through to the provider when you add them to this file.
+
+#### Provider settings
+
+Each entry in `providers` accepts the following fields. Only `name` and `baseUrl` are always required. Authentication requirements depend on the provider.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `providers[].name` | String | Yes | None | A unique name for this connection, such as `"local"` or `"my-anthropic"`. Must not contain `/`. Models refer to this name using their `provider` field. |
+| `providers[].type` | String | No | `"openai"` | The connection type: `"openai"` for OpenAI-compatible APIs, `"azure"` for Azure OpenAI, `"anthropic"` for Anthropic's Messages API, or `"local_model"` for a local model served by `llama-server`. |
+| `providers[].baseUrl` | String containing a URL or file path | Yes | None | The provider's API base URL. For OpenAI-compatible APIs, include the required API prefix, such as `https://api.openai.com/v1` or `http://127.0.0.1:11434/v1` for Ollama. For direct Anthropic access, use `https://api.anthropic.com`. For Azure, use your resource endpoint. With `"type": "local_model"`, this can instead be a path to a `.gguf` model file. |
+| `providers[].wireApi` | String | No | `"completions"` | The API format for OpenAI and Azure connections: `"completions"` for Chat Completions or `"responses"` for the Responses API. Ignored for Anthropic. |
+| `providers[].transport` | String | No | `"http"` | Accepts `"http"` or `"websockets"`. WebSockets require `"type": "openai"` and `"wireApi": "responses"`, and the provider must support that transport. |
+| `providers[].apiKey` | String | Provider-dependent | Unset | The provider's API key. Can be omitted for an unauthenticated local server. |
+| `providers[].bearerToken` | String | Provider-dependent | Unset | A bearer token, without the `Bearer ` prefix. Takes precedence over `apiKey` when both are set. This is a static token, not a token-refresh command. |
+| `providers[].headers` | Object | No | Unset | Additional HTTP headers, with header names as keys and strings as values. |
+| `providers[].headers.<header-name>` | String | No | Unset | The value of a header, for example `"X-Project": "my-project"`. Use `apiKey` or `bearerToken` for standard provider authentication. |
+| `providers[].azure` | Object | No | Unset | Azure-specific options. Contains the `apiVersion` field described below. |
+| `providers[].azure.apiVersion` | String | No | Unset | The Azure API version to request. When set to a non-empty version string supported by your endpoint, the CLI uses the versioned deployment API. When omitted, the CLI uses the versionless `/openai/v1` API. |
+| `providers[].localModel` | Object | No | Unset | Server options for a CLI-managed `.gguf` model. See [Local model server settings](#local-model-server-settings). |
+| `providers[].modelProvider` | String | No | Inferred from the connection | A provider label used only for telemetry. Recognized values are `"openai"`, `"anthropic"`, `"azure_openai"`, `"ollama"`, `"lm_studio"`, `"foundry_local"`, and `"llama_cpp"`. Does not change the connection protocol or model behavior. |
+| `providers[].hasBearerTokenProvider` | Boolean | No | `false` | Indicates that an application using the SDK supplies tokens through a callback. Omit this when configuring the CLI manually. Setting it to `true` in this file does not register a token provider. |
+
+The named-provider file does not support `apiKeyCommand`. Do not put credentials or token-refresh commands in `metadata` or `localModel.args`.
+
+#### Local model server settings
+
+These settings apply only when `providers[].type` is `"local_model"` and `baseUrl` is a path to a `.gguf` file. The CLI starts `llama-server` when the model is first used. The executable must be installed and available on `PATH`. Use an absolute model path to avoid depending on the directory from which you start the CLI.
+
+If `baseUrl` is an HTTP or HTTPS URL, the CLI connects to that existing server and does not use these startup settings. They also do not configure Ollama or other OpenAI-compatible servers.
+
+All fields inside `providers[].localModel` are optional.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `providers[].localModel.ctxSize` | Non-negative integer | `llama-server` default | Requested context size in tokens, passed as `--ctx-size`. The actual allocation can be smaller than requested. |
+| `providers[].localModel.nGpuLayers` | Non-negative integer | `llama-server` default | Number of model layers to offload to the GPU, passed as `--n-gpu-layers`. |
+| `providers[].localModel.parallel` | Non-negative integer | `1` | Number of server slots, passed as `--parallel`. Multiple slots can divide the available context between requests. |
+| `providers[].localModel.args` | Array of strings | `[]` | Additional `llama-server` arguments. Each argument is a separate string, such as `["--threads", "8"]`. These follow the arguments generated from the fields above. |
+| `providers[].localModel.persist` | Boolean | `false` | Requests that the managed server remain running after a clean CLI exit so a later CLI process can reuse it. Otherwise, the CLI cleans up the server on exit. |
+| `providers[].localModel.logs` | String containing a file path or `"inherit"` | Output discarded | Appends the server's standard output and error output to the specified file. Use an absolute path. `"inherit"` sends output to the terminal and can interfere with the CLI display. |
+
+The CLI manages the server's model path, host, and port. You cannot pass `--model`, `-m`, `--host`, or `--port` through `args`, including forms such as `--port=8080`.
+
+#### Model settings
+
+Each entry in `models` accepts the following fields. Only `id` and `provider` are required.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `models[].id` | String | Yes | None | The model identifier used in the CLI. Must be unique within its provider. Also used as the provider's model name unless `wireModel` is set. |
+| `models[].provider` | String | Yes | None | Must match the `name` of an entry in `providers`. |
+| `models[].wireModel` | String | No | Value of `id` | The model or deployment name sent to the provider. Use this when the provider expects a different name from the ID you want to select in the CLI. |
+| `models[].modelId` | String | No | Value of `id` | The model identity used to look up the CLI's model-specific behavior and defaults. For an alias or deployment name, set this to the underlying model's recognized ID. This does not change the model name sent to the provider. |
+| `models[].name` | String | No | `PROVIDER-NAME/MODEL-ID` | A display name for the model. Does not change its selection ID. |
+| `models[].maxPromptTokens` | Integer | No | Model-dependent, otherwise `128000` | The input token budget. Use a positive whole number that matches your model and deployment. |
+| `models[].maxContextWindowTokens` | Integer | No | Known model limit, otherwise unset | The total context-window limit, including input and output tokens. Set this for models whose limit the CLI does not know. |
+| `models[].maxOutputTokens` | Integer | No | Model- and provider-dependent | The output token budget. The provider and the model's reasoning requirements can further constrain the output. |
+| `models[].capabilities` | Object | No | Model defaults | Describes supported features and limits. See [Model capabilities](#model-capabilities). |
+| `models[].systemMessage` | Object | No | Standard CLI instructions | Adds to, replaces, or customizes the system instructions for this model. See [Model system messages](#model-system-messages). |
+| `models[].metadata` | Object | No | Unset | Additional descriptive data, including information saved when a model is discovered. See [Model metadata](#model-metadata). |
+
+The three token-limit fields accept whole numbers from `0` to `4294967295`. Use positive values appropriate for your deployment rather than relying on `0` as a way to disable a limit. These settings tell the CLI what limits to use, but do not increase the model's actual capacity.
+
+#### Model capabilities
+
+The `models[].capabilities` object describes the model. Setting a feature to `true` does not add that feature to a model that does not support it.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `models[].capabilities.family` | String | Descriptive model-family identifier. Use `modelId`, not this field, to choose the CLI's model-specific behavior. |
+| `models[].capabilities.supports` | Object | Supported features. See [Supported model features](#supported-model-features). |
+| `models[].capabilities.limits` | Object | Token and image limits. See [Model capability limits](#model-capability-limits). |
+
+All capability fields are optional. Objects are merged with the model's defaults, and arrays replace the corresponding default arrays.
+
+#### Supported model features
+
+The following fields belong inside `models[].capabilities.supports`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `models[].capabilities.supports.vision` | Boolean | Whether the model accepts images. Defaults to `false` when no other capability information is available. |
+| `models[].capabilities.supports.toolCalls` | Boolean | Whether the model supports tool calls. The spelling `tool_calls` is also accepted and takes precedence if both are present. This describes support, not permission to run tools. |
+| `models[].capabilities.supports.streaming` | Boolean | Whether the model supports streamed responses. This is capability information, not a setting to turn response streaming on or off. |
+| `models[].capabilities.supports.adaptive_thinking` | String or boolean | The model's support for Anthropic adaptive thinking. Prefer one of the string values described below. For compatibility, `true` means `"optional"` and `false` means `"unsupported"`. |
+| `models[].capabilities.supports.reasoning_effort` | Array of strings | Reasoning-effort levels the model supports. This advertises available levels, not the level to use for a request. The CLI also applies model-specific restrictions. |
+| `models[].capabilities.supports.thinking` | Boolean | Descriptive support information that model discovery can save. Does not by itself configure thinking or enable reasoning-effort controls. |
+| `models[].capabilities.supports.reasoningEffort` | Boolean or array of strings | Compatibility field. A boolean does not enable reasoning-effort controls, and an array is not used consistently across CLI features. Use `reasoning_effort` for a supported-level list. |
+
+The `adaptive_thinking` values have the following meanings.
+
+| Value | Meaning |
+|-------|---------|
+| `"unsupported"` | The model does not support adaptive thinking. This does not rule out other forms of reasoning. |
+| `"optional"` | The model supports adaptive thinking, but does not require it. |
+| `"required"` | When thinking is enabled, the model requires adaptive thinking instead of a manual thinking budget. Thinking can still be disabled. |
+| `"adaptive_only"` | The model requires adaptive thinking and does not allow thinking to be disabled. |
+
+For `reasoning_effort`, the CLI recognizes `"none"`, `"minimal"`, `"low"`, `"medium"`, `"high"`, `"xhigh"`, and `"max"`. List only the levels your model supports, for example `["low", "medium", "high"]`. An omitted or empty list leaves the CLI to use its model-specific defaults. Select a level with `--reasoning-effort` or the model picker where available.
+
+#### Model capability limits
+
+The following fields belong inside `models[].capabilities.limits`. All are optional.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `models[].capabilities.limits.max_prompt_tokens` | Integer | Input token budget. Corresponds to `maxPromptTokens`. |
+| `models[].capabilities.limits.max_context_window_tokens` | Integer | Total context-window limit. Corresponds to `maxContextWindowTokens`. |
+| `models[].capabilities.limits.max_output_tokens` | Integer | Output token budget. Corresponds to `maxOutputTokens`. |
+| `models[].capabilities.limits.vision` | Object | Image limits, containing the fields below. |
+| `models[].capabilities.limits.vision.supported_media_types` | Array of strings | Accepted image MIME types, such as `"image/jpeg"`, `"image/png"`, and `"image/webp"`. These three types are the default. |
+| `models[].capabilities.limits.vision.max_prompt_images` | Integer | Maximum number of images per prompt. The default is `1`. |
+| `models[].capabilities.limits.vision.max_prompt_image_size` | Integer | Maximum size of each image in bytes. The default is `3145728` (3 MiB). |
+
+Prefer the model's `maxPromptTokens`, `maxContextWindowTokens`, and `maxOutputTokens` fields when setting token budgets manually. Discovery can save limits in both places. Keep duplicate values consistent, because different CLI operations read the two representations. For CLI-managed local servers, a measured context limit can take precedence over a configured value.
+
+Use non-negative whole numbers for token counts and image sizes, and a positive whole number for the image count. Token counts and image counts must fit within `0` to `4294967295`. Image sizes are measured in bytes, not tokens.
+
+#### Model system messages
+
+`models[].systemMessage` controls the system instructions used when the CLI builds a standard prompt for this model, including for general-purpose subagents. It takes precedence over session-wide system-message configuration on those paths. It does not replace the instructions of a selected custom agent or a specialized subagent.
+
+Prefer `"mode": "append"` when you only need additional instructions. Replacing or removing built-in instructions can change the CLI's tool use and other expected behavior. Omit `systemMessage` to keep the standard instructions, rather than setting it to `null`.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `models[].systemMessage.mode` | String | No | `"append"` (the default), `"replace"`, or `"customize"`. See the mode table below. |
+| `models[].systemMessage.content` | String | In `replace` mode | Text to append or use as replacement instructions. In `customize` mode, this is appended after the section changes. |
+| `models[].systemMessage.sections` | Object | No | Section changes, available only in `customize` mode. See [System-message sections](#system-message-sections). |
+| `models[].systemMessage.contentBlocks` | Array of objects | No | Replacement instructions split into blocks, available only in `replace` mode. See [System-message content blocks](#system-message-content-blocks). |
+
+Only the fields listed for a mode are accepted. For example, adding `sections` without setting `"mode": "customize"` causes a configuration error.
+
+| Mode | Accepted fields | Effect |
+|------|-----------------|--------|
+| `"append"` | `mode`, `content` | Keeps the standard prompt and appends `content`. Omitting `mode` selects this mode. |
+| `"replace"` | `mode`, `content`, `contentBlocks` | Replaces the standard instructions. `content` must be present as a string, even when you supply `contentBlocks`. The CLI can still add applicable environment and agent context. |
+| `"customize"` | `mode`, `sections`, `content` | Changes named sections of the standard prompt and optionally appends `content`. Sections you do not change retain their defaults. |
+
+In replacement content, `{% raw %}{{copilot:memories}}{% endraw %}` inserts the CLI's memory instructions and context when available.
+
+#### System-message sections
+
+In `customize` mode, `models[].systemMessage.sections` maps section names to objects. Each object specifies an `action` and, where needed, `content`. For example, `models[].systemMessage.sections.tone` changes the tone section.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `models[].systemMessage.sections.<section-name>` | Object | No | A change to one of the sections or groups listed below. |
+| `models[].systemMessage.sections.<section-name>.action` | String | Yes, for each entry | `"replace"`, `"remove"`, `"append"`, `"prepend"`, or `"preserve"`. |
+| `models[].systemMessage.sections.<section-name>.content` | String | No | Text used by `replace`, `append`, or `prepend`. Omitted content is treated as empty. Not needed for `remove` or `preserve`. |
+
+The available actions are:
+
+| Action | Effect |
+|--------|--------|
+| `"replace"` | Replaces the section or group with `content`. |
+| `"remove"` | Removes the section or group. A group removal keeps sections that have their own entries in `sections`. |
+| `"append"` | Adds `content` after the section or group. Include any required spaces or newlines in `content`. |
+| `"prepend"` | Adds `content` before the section or group. Include any required spaces or newlines in `content`. |
+| `"preserve"` | Leaves the section unchanged and protects it from removal through a group. Does not protect it from group replacement. |
+
+The `transform` action is not supported in `providers.json` because it requires an application callback, not saved JSON configuration.
+
+Use the following section or group names as keys in `sections`.
+
+| Name | Kind | Content covered |
+|------|------|-----------------|
+| `preamble` | Section | The assistant's introductory identity instructions. |
+| `tone` | Section | Tone and response style. |
+| `tool_efficiency` | Section | Guidance on efficient tool use. |
+| `environment_context` | Section | Information about the working environment. |
+| `code_change_rules` | Section | Guidance for making code changes. |
+| `guidelines` | Section | Additional agent behavior guidelines. |
+| `safety` | Section | Safety guidance and environment limitations. |
+| `custom_instructions` | Section | Loaded custom instructions. |
+| `runtime_instructions` | Section | Additional instructions assembled for the session. |
+| `last_instructions` | Section | Instructions placed at the end of the prompt. |
+| `identity` | Group | Identity, interaction, tone, delegation, tool-efficiency, version, model, and task instructions. Does not include `environment_context`. |
+| `tool_instructions` | Group | The tool introduction and tool-use instructions. |
+
+Individual section changes are applied before group changes. A group replacement replaces all its member sections, including sections you have customized separately.
+
+#### System-message content blocks
+
+In `replace` mode, `models[].systemMessage.contentBlocks` provides the replacement instructions instead of the plain `content` string. Keep `content` present because it is required by the configuration format. All blocks must have a `content` string.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `models[].systemMessage.contentBlocks[].content` | String | Yes | None | The text for this block, in array order. |
+| `models[].systemMessage.contentBlocks[].isStatic` | Boolean | No | Not marked static | Marks content that can be cached independently of changing prompt content. |
+| `models[].systemMessage.contentBlocks[].cacheBreakpoint` | Boolean | No | No explicit breakpoint | Requests a cache boundary after this block for providers that support explicit prompt caching. Does not guarantee provider caching. |
+
+#### Model metadata
+
+`models[].metadata` is an object whose values can be any valid JSON value. It is descriptive data, not a way to supply API request parameters or credentials. You do not need to add metadata manually.
+
+Model discovery can save the following string fields. Leave existing discovery values intact.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `models[].metadata.adapterId` | String | Identifies the discovery integration, such as `"ollama"`. |
+| `models[].metadata.providerKind` | String | The discovered provider's kind, such as `"ollama"`. |
+| `models[].metadata.providerInstanceId` | String | Identifies the provider instance, such as `"ollama:http://127.0.0.1:11434"`. |
+| `models[].metadata.providerDigest` | String | A model digest supplied by the provider, when available. |
+
+#### Provider configuration example
+
+This example connects to an existing Ollama server and shows how model capabilities and system instructions are nested. It assumes that `qwen3:8b` is installed. The token limits are example budgets, not a statement of the model's maximum capacity. Adjust them to match the context configured on your server.
+
+```json copy
+{
+  "providers": [
+    {
+      "name": "local",
+      "type": "openai",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "modelProvider": "ollama"
+    }
+  ],
+  "models": [
+    {
+      "id": "qwen3:8b",
+      "provider": "local",
+      "name": "Qwen 3 8B",
+      "maxPromptTokens": 6144,
+      "maxContextWindowTokens": 8192,
+      "maxOutputTokens": 2048,
+      "capabilities": {
+        "supports": {
+          "vision": false,
+          "toolCalls": true
+        }
+      },
+      "systemMessage": {
+        "mode": "customize",
+        "sections": {
+          "tone": {
+            "action": "append",
+            "content": "\nUse concise explanations."
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+After restarting the CLI, select this model with `copilot --model local/qwen3:8b` or the `/model` picker. Add more objects to either array to configure additional providers and models.
 
 ### `agents/`
 
@@ -133,7 +403,7 @@ The following items are managed by the CLI. You generally should not edit them m
 Stores internal application state that is managed automatically by the CLI, including authentication data, installed plugin metadata, and other runtime information. You should not normally need to edit this file.
 
 > [!NOTE]
-> Earlier versions of {% data variables.copilot.copilot_cli_short %} stored both user settings and application state in `config.json`. User-editable settings are now located in `settings.json`. Any user settings in `config.json` at startup are automatically migrated to `settings.json`. Application state fields—such as `loggedInUsers`, `installedPlugins`, `firstLaunchAt`, and `staff`—remain in `config.json` and are not migrated.
+> Earlier versions of {% data variables.copilot.copilot_cli_short %} stored both user settings and application state in `config.json`. User-editable settings are now located in `settings.json`. Settings left in `config.json` are ignored. This file only holds internal state such as installed plugins and trusted folders.
 
 ### `permissions-config.json`
 
@@ -438,6 +708,8 @@ MDM managed settings load at startup and merge with user settings as a policy ba
 
 The CLI also reads `.claude/settings.json` and `.claude/settings.local.json` for the shared cross-tool subset of repository settings (such as `companyAnnouncements`, `disableAllHooks`, `enabledPlugins`, `extraKnownMarketplaces`, and `hooks`).
 
+Repository defaults are optional: set `enabledPlugins` entries to `false` in repository-local settings to override repository defaults. Managed required or blocked plugin entries always win. See [AUTOTITLE](/copilot/how-tos/copilot-cli/customize-copilot/plugins-finding-installing#turn-off-a-repository-default).
+
 ### User settings (`~/.copilot/settings.json`)
 
 These settings apply across all your sessions and repositories. You can use the `/settings` slash command to run an interactive dialog, or use specific slash commands to update individual values, or edit this file directly.
@@ -453,8 +725,6 @@ These settings apply across all your sessions and repositories. You can use the 
 | `bashEnv` | `boolean` | `false` | Enable `BASH_ENV` support for bash shells. Can also be set with `--bash-env` or `--no-bash-env`. |
 | `beep` | `boolean` | `true` | Play an audible beep when attention is required. |
 | `beepOnSchedule` | `boolean` | `true` | Play an audible beep when a scheduled `/every` or `/after` run finishes. |
-| `builtInAgents.rubberDuck` | `boolean` | `true` | Enable the rubber-duck subagent that provides adversarial feedback on agent plans. |
-| `builtInAgents.rubberDuckAutoInvoke` | `boolean` | `false` | Include proactive prompting for automatic rubber-duck invocation. Set to `true` to opt into additional rubber-duck nudges during agent turns. |
 | `colorMode` | `"default"` \| `"github"` \| `"dim"` \| `"high-contrast"` \| `"colorblind"` | `"github"` | Deprecated alias for `theme`. Prefer `theme`. | <!-- markdownlint-disable-line GHD046 -->
 | `commandHistoryMaxSize` | `number` | `50` | Maximum number of recent commands retained for input history and reverse search. Must be an integer between `1` and `1000`. |
 | `compactPaste` | `boolean` | `true` | Collapse large pastes (more than 10 lines) into compact tokens. |
@@ -463,6 +733,8 @@ These settings apply across all your sessions and repositories. You can use the 
 | `continueOnAutoMode` | `boolean` | `false` | Automatically switch to auto mode when rate-limited. When `true`, eligible rate limit errors trigger an automatic switch to auto mode and retry. Does not apply to global rate limits or BYOK providers. |
 | `copyOnSelect` | `boolean` | `true` (macOS), `false` (other) | Automatically copy mouse-selected text to the system clipboard. |
 | `customAgents.defaultLocalOnly` | `boolean` | `false` | Only use local custom agents (no remote organization or enterprise agents). |
+| `defaultMode` | `"interactive"` \| `"plan"` \| `"autopilot"` | `"interactive"` | The agent mode that new interactive sessions start in. The `--mode`, `--autopilot`, and `--plan` options take precedence. Resumed sessions keep their own mode, and the setting is ignored for `-p`/`--prompt`, `--server`, and `--acp` runs. |
+| `defaultPermissionMode` | `"manual"` \| `"assisted"` \| `"allow-all"` | Varies | Your preferred permission mode for new interactive sessions. A managed `permissions.defaultMode` takes precedence over this preference. If neither default is set, sessions can start in manual or assisted mode. Set `"manual"` to prompt for requests that aren't already allowed, `"assisted"` to use model review for eligible requests, or `"allow-all"` to grant broad permissions equivalent to `--allow-all`. Deny rules and enterprise restrictions still apply. See [AUTOTITLE](/copilot/concepts/customizations/allowing-safe-commands). Resumed sessions keep their own mode. The setting does not apply to non-interactive runs, and `--allow-all` or `--yolo` takes precedence. An assisted startup default does not apply to remote sessions. If a configured mode is unavailable or blocked by enterprise policy, the CLI starts with manual approval and tells you why. Pair `"assisted"` or `"allow-all"` with `defaultMode: "autopilot"` to skip the autopilot permission confirmation when the configured permission mode can be applied. |
 | `deniedUrls` | `string[]` | `[]` | URLs or domains that are always denied. Denial rules take precedence over allow rules. |
 | `disableAllHooks` | `boolean` | `false` | Disable all hooks (both repository-level and user-level). |
 | `disabledMcpServers` | `string[]` | `[]` | MCP server names to disable. Listed servers are configured but not started. |
@@ -480,45 +752,49 @@ These settings apply across all your sessions and repositories. You can use the 
 | `ide.openDiffOnEdit` | `boolean` | `true` | Open file edit diffs in the connected IDE for approval. When `false`, file edit approvals are shown only in the terminal. |
 | `ignoredSkillsLocations` | `string[]` | `[]` | Skill directories (and their descendants) excluded from discovery, regardless of which location would otherwise surface them. Supports `~`-relative paths. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#skill-locations). |
 | `includeCoAuthoredBy` | `boolean` | `true` | Add a `Co-authored-by` trailer to git commits made by the agent. |
+| `inlineImages` | `boolean` | `true` | Render images inline using the Kitty graphics protocol. Requires a supported terminal (Ghostty, kitty, or WezTerm). When disabled, image attachments show a text placeholder. |
 | `keepAlive` | `"on"` \| `"off"` \| `"busy"` | `"off"` | Keep-alive mode applied at CLI startup. `"on"` always prevents the system from sleeping, `"busy"` prevents sleeping only while the agent is running, and `"off"` disables keep-alive. Also configurable with the `/keep-alive` slash command. |
 | `logLevel` | `"none"` \| `"error"` \| `"warning"` \| `"info"` \| `"debug"` \| `"all"` \| `"default"` | `"default"` | Logging verbosity. |
 | `mergeStrategy` | `"rebase"` \| `"merge"` | — | Conflict resolution strategy for `/pr fix conflicts`. When set to `"rebase"`, conflicts are resolved by rebasing onto the base branch. When set to `"merge"`, the base branch is merged into the feature branch. If not configured, a picker dialog is shown. |
 | `model` | `string` | varies | AI model to use. Set to `"auto"` to let {% data variables.product.prodname_copilot_short %} pick the best available model automatically. Managed by the `/model` slash command. |
 | `mouse` | `boolean` | `true` | Enable mouse support. Can also be set with `--mouse` or `--no-mouse`. |
-| `permissions.disableBypassPermissionsMode` | `string` | — | Set to `"disable"` to suppress all allow-all flags (`--allow-all-tools`, `--allow-all-paths`, `--allow-all-urls`, `--allow-all`, `--yolo`) at startup so they cannot be used to grant elevated permissions. Set to `"allow-auto-only"` to keep blocking full allow-all while still permitting `/allow-all auto` (LLM-assisted auto-approval). See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#restricting-the---allow-all-options). |
+| `permissions.disableBypassPermissionsMode` | `string` | — | Set to `"disable"` to block all allow-all options (`--allow-all-tools`, `--allow-all-paths`, `--allow-all-urls`, `--allow-all`, `--yolo`). This setting does not block {% data variables.copilot.assisted_permissions %}, which are controlled separately. Other values are treated as an alias of `"disable"` and a warning is written to the log. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#restricting-the-allow-all-options). |
 | `pinnedPrompts` | `boolean` | `true` | Pin the current section's user prompt just below the top bar while scrolling the timeline, so it stays clear which request the visible output belongs to. CLI UI only—has no effect on prompts sent to the model. |
 | `powershellFlags` | `string[]` | `["-NoProfile", "-NoLogo"]` | Flags passed to PowerShell on startup. On Windows, the CLI prefers PowerShell 7+ (`pwsh`) and falls back to Windows PowerShell (`powershell.exe`) when `pwsh` is unavailable. Windows only. |
 | `proxyKerberosServicePrincipal` | `string` | unset | Service principal name (SPN) for Kerberos/Negotiate proxy authentication, overriding the derived `HTTP/<proxy-host>`. |
 | `proxyUrl` | `string` | unset | Proxy URL for HTTP(S) requests (for example, `http://proxy.corp.example:3128`). Overridden by the `HTTP_PROXY` or `HTTPS_PROXY` environment variables (any casing). |
-| `remote` | `"on"` \| `"off"` | `"on"` | Controls session syncing and remote access. Set to `"off"` to keep session data local only and disable remote control. Can also be set with `--remote` or `--no-remote`. |
+| `remoteSessions` | `boolean` | `false` | Enable remote control by default for interactive sessions when remote control is available. Use `/remote on` or `/remote off` to change remote control for the current session. This is separate from the `remoteExport` setting for session syncing. |
 | `renderHexColors` | `boolean` | `true` | Show six-digit hex color codes written as inline code (for example, `` `#FF0000` ``) as color swatches. |
 | `renderMarkdown` | `boolean` | `true` | Render Markdown in terminal output. |
-| `remoteExport` | `boolean` | `true` | Export sessions remotely when session sync is available. Set to `false` to opt out of remote export by default. The `remoteSessions` setting when set to `true`, or the `--remote` flag, still enables export and steering regardless of this setting. |
+| `remoteExport` | `boolean` | `true` | Sync session history to your account when session sync is available. Set to `false` to opt out by default. Enabling remote control with `remoteSessions: true` also enables export, regardless of this setting. Syncing history does not itself enable remote control. Use `--sync-session=on` or `--sync-session=off` to override history syncing for a run. |
 | `respectGitignore` | `boolean` | `true` | Exclude gitignored files from the `@` file mention picker. When `false`, the picker includes files normally excluded by `.gitignore`. |
 | `sandbox.allowBypass` | `boolean` | `true` | Allow sandboxed commands to request a bypass for specific operations (displays a permission prompt), so tools like `grep` and `glob` keep working when the sandbox would otherwise block them. The prompt also lets you disable sandboxing for the rest of the current session if the effective policy permits bypass. Set to `false` to opt out. |
 | `sandbox.enabled` | `boolean` | `false` | Restrict shell commands, MCP/LSP servers, and built-in file/web tools to a sandboxed environment with limited file system and network access. Enable it from the `/sandbox` dialog or with `/sandbox enable`. |
 | `sandbox.auth.git` | `boolean` | `true` | Inject Git credentials into the sandbox so commands running inside it can authenticate with Git. Set to `false` to opt out. Renamed from `sandbox.gitAuth`; the old key has no migration and is ignored wherever it still appears. |
 | `sandbox.auth.gh` | `boolean` | `true` | Inject {% data variables.product.prodname_cli %} (`gh`) credentials into the sandbox so commands running inside it can authenticate with the {% data variables.product.prodname_cli %}. Set to `false` to opt out. Renamed from `sandbox.ghAuth`; the old key has no migration and is ignored wherever it still appears. |
-| `sandbox.userPolicy.network.allowLocalNetwork` | `boolean` | `true` | Allow sandboxed commands to reach local network addresses (for example, local dev servers). Set to `false` to opt out. On Windows hosts whose ProcessContainer backend supports it, enabling this setting also lets a sandboxed command reach the host's loopback address (for example, `localhost`), matching macOS and Linux behavior. Older Windows versions keep host loopback denied even with this setting enabled. |
-| `sandbox.userPolicy.network.proxy` | `object` | unset | Route sandboxed network traffic through an HTTP proxy. Fields: `url` (required), `username` (optional), `password` (optional). Configure it from the `/sandbox` dialog's **Network** tab, which masks the password field. The password itself is stored in the OS keychain rather than in `settings.json`, so it isn't editable via `/settings`. Enforcement differs by platform: on macOS the proxy is cooperative—{% data variables.copilot.copilot_cli_short %} sets `HTTP_PROXY`, `HTTPS_PROXY`, and `ALL_PROXY` in the sandbox, so only programs that honor those variables use it; on Linux it is strictly enforced through a private network namespace that permits only the proxy endpoint (the proxy must have an IPv4 address and must not embed credentials); on Windows the proxy is not supported, so a policy that sets it is rejected and the sandboxed command fails with an error. |
-| `sandbox.userPolicy.network.allowedHosts` | `string[]` | `[]` | Hosts a sandboxed command is allowed to reach. Entries are exact hostnames, IP addresses, or `*.example.com` for strict subdomain matches (`*` matches every host). A non-empty list blocks any host that doesn't match. Configure from the `/sandbox` dialog's **Network** tab under **Host rules**. |
+| `sandbox.credentials` | `object` | unset | Mask selected environment variables in sandboxed processes. Contains an `envVars` object keyed by variable name, with a non-empty `injectHosts` array for each entry. Processes receive placeholders, and the local proxy supplies the real values only in HTTPS request headers to those hosts. Stores variable names and host rules, not secret values. Requires sandboxing to be enabled. Configure from the `/sandbox` dialog's **Credentials** tab under **Masked environment variables**. See [AUTOTITLE](/copilot/how-tos/cloud-and-local-sandboxes/configuring-local-sandbox-settings#masking-environment-variables). |
+| `sandbox.userPolicy.network.allowLocalNetwork` | `boolean` | `false` | Control local network access, such as connections to local development servers. The effect on sandboxed commands depends on the operating system. On supported Windows hosts, enabling this setting also allows connections to the host's localhost. Older Windows versions keep localhost blocked even with this setting enabled. Windows proxying and host rules require this to be `true`. |
+| `sandbox.userPolicy.network.proxy` | `object` | unset | Route sandboxed network traffic through an HTTP(S) proxy. Fields: `url` (required), `username` (optional), `password` (optional). The URL must not contain credentials. Configure credentials in the `/sandbox` dialog's **Network** tab, which masks the password field. Literal passwords use the OS credential store when available, with a local file fallback. `settings.json` holds a secret reference. The password can instead be a whole-field `${VAR}` or `$VAR` environment-variable reference. Proxy enforcement differs by platform, as described below. |
+| `sandbox.userPolicy.network.allowedHosts` | `string[]` | `[]` | Hosts a sandboxed command is allowed to reach. Entries are exact hostnames, IP addresses, or `*.example.com` for subdomains but not the root domain (`*` matches every host). CIDR blocks are not supported. Do not include URLs or ports. A non-empty list blocks unmatched hosts, except for `localhost`, `127.0.0.1`, and `::1` when outbound and local network access are both enabled. These automatic entries do not change your saved list. Explicit deny rules and enterprise allowlists still apply. Configure from the `/sandbox` dialog's **Network** tab under **Host rules**. |
 | `sandbox.userPolicy.network.blockedHosts` | `string[]` | `[]` | Hosts a sandboxed command is denied from reaching, matched the same way as `allowedHosts`. `blockedHosts` always takes precedence over a matching `allowedHosts` entry, and denying a domain also denies its subdomains. Configure from the `/sandbox` dialog's **Network** tab under **Host rules**. |
-| `sandbox.userPolicy.deniedPaths` | `string[]` | `[]` | Paths that sandboxed commands are denied access to. On Windows, the ProcessContainer (BaseContainer) backend cannot enforce per-path deny rules, so a policy that sets `deniedPaths` is rejected and the sandboxed command fails with an error—remove the denied paths, or use macOS or Linux, to run that policy. |
-| `sandbox.userPolicy.seatbelt.keychainAccess` | `boolean` | `false` | macOS only. Grant sandboxed commands access to the system keychain. Can also be toggled from the `/sandbox` dialog. |
+| `sandbox.userPolicy.filesystem.deniedPaths` | `string[]` | `[]` | Paths that sandboxed commands are denied access to. Windows requires a version that supports denied paths. If the host cannot enforce them, the command fails rather than running with weaker restrictions. Missing denied paths and their parents are created as directories before launch and are not automatically removed, even for a name such as `.env`. Preparation errors stop launch. The read-only `/sandbox policy` preview creates nothing and omits missing denied paths on Linux. |
+| `sandbox.userPolicy.seatbelt.keychainAccess` | `boolean` | `false` | macOS only. Grant sandboxed commands access to the system keychain. Configurable only in `settings.json`, not through `/sandbox` or `/settings`. |
 | `screenReader` | `boolean` | `false` | Enable screen reader optimizations. |
 | `scrollbar` | `boolean` | `true` | Show the scrollbar in scrollable views. Set to `false` to hide it and use the full terminal width. |
 | `shellShortcut` | `boolean` | `true` | Let a lone `$` at the prompt, followed by <kbd>Enter</kbd>, open an interactive shell rooted at the session's working directory (activates only for a local, trusted, idle session on a real TTY). User- or managed-scoped only—not repo-overridable. |
+| `showReasoning` | `boolean` | None | Show model reasoning in the timeline. You can set this with `/config` or `/settings`, or toggle it with <kbd>Ctrl</kbd>+<kbd>T</kbd>. Your preference is saved across sessions. |
 | `showTimestamps` | `boolean` | `true` | Show dim `HH:mm` timestamps next to user messages in the timeline. |
 | `showTipsOnStartup` | `boolean` | `true` | Show a random command tip when the CLI starts. |
 | `sidebar` | `boolean` | `true` | Enable the current-session sidebar. Set to `false` to disable it entirely, hiding the composer hint and the <kbd>←</kbd> open gesture. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#sidebar-and-sessions-tab-shortcuts). |
 | `skillDirectories` | `string[]` | `[]` | Additional directories to search for custom skill definitions (in addition to `~/.copilot/skills/`). |
 | `statusLine` | `object` | — | Custom status line display. `type`: must be `"command"`. `command`: path to an executable script that receives session JSON on stdin and prints status content to stdout. `padding`: optional number of left-padding spaces. `refreshInterval`: optional integer number of seconds (`1`–`2147483`) to re-run the command on a timer instead of only on events; omit it to refresh only when the session state changes. If the command fails to spawn, exits non-zero, or fails to receive the status JSON on stdin, the CLI logs a warning once per continuous failure episode and leaves the status line blank instead of failing silently. Run with `--log-level all` to see the underlying error detail. |
-| `stayInAutopilot` | `boolean` | `true` | Remain in autopilot mode after each task completes. When enabled, the next prompt you enter after a task completes is also handled in autopilot mode. For more information, see [AUTOTITLE](/copilot/concepts/agents/copilot-cli/autopilot#staying-in-autopilot-mode-between-tasks). |
+| `stayInAutopilot` | `boolean` | `true` | Remain in autopilot mode after each task completes. When enabled, the next prompt you enter after a task completes is also handled in autopilot mode. For more information, see [AUTOTITLE](/copilot/how-tos/copilot-cli/use-copilot-cli/use-autopilot-mode). |
 | `storeTokenPlaintext` | `boolean` | `false` | Allow authentication tokens to be stored in plain text in `config.json` when no system keychain is available. |
 | `stream` | `boolean` | `true` | Enable streaming responses. |
 | `streamerMode` | `boolean` | `false` | Hide preview model names, quota details, prompt timestamps, and the update-available notice. Useful when demonstrating {% data variables.copilot.copilot_cli_short %} or screen sharing. |
 | `subagents.agents` | `object` | `{}` | Per-agent model configuration, keyed by agent name. Each value is an object with optional `model` (string), `modelPolicy` (`"preferred"` or `"required"`), `effortLevel` (string), and `contextTier` (`"default"`, `"long_context"`, or `"inherit"`) fields. Set `model`, `effortLevel`, or `contextTier` to `"inherit"` to use the parent session's value at dispatch time. `modelPolicy` has no effect when the agent definition itself sets `modelPolicy: "required"`—that lock can't be overridden here. Use the `/subagents` slash command to configure these settings interactively. |
-| `subagents.disabledSubagents` | `string[]` | `[]` | Agent names to prevent from being dispatched. Only the `rubber-duck` agent cannot be disabled via this setting. All other built-in agents—including `explore`, `task`, `code-review`, `general-purpose`, `research`, and `security-review`—can be disabled. |
+| `subagents.agents["rubber-duck"].autoInvoke` | `boolean` | `false` | Allow Copilot to proactively consult the rubber duck agent without being asked. To change this, run `/subagents`, select `rubber-duck`, press **Enter**, then toggle **Proactive invocation**. |
+| `subagents.disabledSubagents` | `string[]` | `[]` | Names of subagents that are turned off. Manage this list using the **On/Off** control for each agent in the `/subagents` picker in an interactive session. |
 | `subagents.maxConcurrency` | `number` | plan-based | Maximum concurrent subagents for this session. Only honored for usage-based billing users; ignored for all other plans. Capped at `32`. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#subagent-limits). |
 | `subagents.maxDepth` | `number` | `6` | Maximum subagent nesting depth. Only honored for usage-based billing users; ignored for all other plans. Capped at `256`. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#subagent-limits). |
 | `tabs.enabled` | `boolean` | `true` | Show the home tab bar. Set to `false` to hide it entirely. |
@@ -537,18 +813,26 @@ These settings apply across all your sessions and repositories. You can use the 
 > [!TIP]
 > Run `copilot help sandbox` for the full sandbox reference, including supported hosts and all `sandbox` settings keys.
 
-The `/sandbox` dialog groups `git`, `gh`, and keychain access under a dedicated **Auth** tab, and shows the `settings.json` path where the current sandbox configuration is stored. On the **Filesystem** tab, the configured path list is summarized by permission (for example, `2 read/write, 1 read-only`) behind a **Paths** row. Press <kbd>Enter</kbd> on that row to open the full list, which takes over the cursor and tab bar until you press <kbd>Esc</kbd>. Configured paths are displayed as absolute paths rather than `./`-relative or `~`-shortened forms. Typing `~/path` when adding a path still expands it to your home directory. Press <kbd>Ctrl</kbd>+<kbd>E</kbd> in the `/sandbox` dialog to save any pending changes and open `settings.json` in your editor (`COPILOT_EDITOR`, `VISUAL`, or `EDITOR`), matching the same shortcut in `/settings`. The dialog reloads its state from disk after you edit and save the file.
+The `/sandbox` dialog groups Git authentication, `gh` authentication, and masked environment variables under a dedicated **Credentials** tab, and shows the `settings.json` path where the current sandbox configuration is stored. On the **Filesystem** tab, the configured path list is summarized by permission (for example, `2 read/write, 1 read-only`) behind a **User-configured paths** row. Press <kbd>Enter</kbd> on that row to open the full list, which takes over the cursor and tab bar until you press <kbd>Esc</kbd>. Configured paths are displayed as absolute paths rather than `./`-relative or `~`-shortened forms. Typing `~/path` when adding a path still expands it to your home directory. Press <kbd>Ctrl</kbd>+<kbd>E</kbd> in the `/sandbox` dialog to save any pending changes and open `settings.json` in your editor (`COPILOT_EDITOR`, `VISUAL`, or `EDITOR`), matching the same shortcut in `/settings`. The dialog reloads its state from disk after you edit and save the file.
 
-`sandbox.userPolicy.network.allowedHosts` and `sandbox.userPolicy.network.blockedHosts` run through a built-in local proxy that enforces them strictly on every platform, unlike the cooperative `sandbox.userPolicy.network.proxy` setting on Linux and macOS. When both are configured, the local proxy uses `sandbox.userPolicy.network.proxy` as its upstream, so proxy credentials never reach the sandboxed child process.
+Host rules and `sandbox.userPolicy.network.proxy` use a built-in local proxy. When both are configured, the local proxy applies the host rules before forwarding traffic to the upstream proxy. Upstream credentials stay outside the sandboxed child process. Host rules and proxy settings are inactive when outbound access is off.
 
-Sandboxing is powered by [Microsoft eXecution Container (MXC)](https://github.com/microsoft/mxc), which provides platform-specific containment backends. {% data variables.copilot.copilot_cli_short %} uses Seatbelt on macOS, Bubblewrap on Linux, and ProcessContainer on Windows.
+When no proxy is set in sandbox settings, the local proxy selects its upstream proxy from the first non-empty environment variable on the host in this order: `HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY`. Only `http://` and `https://` proxies are supported, not `socks5`.
+
+Destinations matching the host's `NO_PROXY` bypass only this inherited upstream proxy. The sandbox's local proxy still handles these connections and applies its host rules. A proxy configured in sandbox settings ignores `NO_PROXY`.
+
+On macOS and Linux, the sandbox restricts direct connections so programs cannot avoid the proxy. On Windows, the sandbox relies on programs honoring the proxy settings. As a result, programs that ignore the proxy settings on Windows can connect directly and get around your host rules. Windows proxying and host rules also require a supported host and `allowLocalNetwork: true`, which permits private-network access. On Linux, proxy settings reject IPv6 address literals other than the `[::]` dual-stack wildcard. Use an IPv4 endpoint or a hostname with IPv4 support.
+
+Sandbox settings are user-level or enterprise-managed. They are not repository-overridable. For configuration steps and network limitations, see [AUTOTITLE](/copilot/how-tos/cloud-and-local-sandboxes/configuring-local-sandbox-settings).
+
+Sandboxing is powered by [Microsoft eXecution Container (MXC)](https://github.com/microsoft/mxc?utm_source=cli-config-directory-reference-article-microsoft-mxc&utm_medium=docs&utm_campaign=universe-2026), which provides platform-specific containment backends. {% data variables.copilot.copilot_cli_short %} uses Seatbelt on macOS, Bubblewrap on Linux, and ProcessContainer on Windows.
 
 ### Repository settings (`.github/copilot/settings.json`)
 
 Repository settings apply to everyone who works in the repository. They are committed to the repository and shared with collaborators.
 
 > [!NOTE]
-> The plugin-related keys in the repository configuration file (`enabledPlugins` and `extraKnownMarketplaces`) are also read by {% data variables.copilot.copilot_cloud_agent %}, not only {% data variables.copilot.copilot_cli_short %}. This lets you enable the same plugins for both clients from a single file. For more information about plugins, see [AUTOTITLE](/copilot/concepts/agents/about-plugins).
+> The plugin-related keys in the repository configuration file (`enabledPlugins` and `extraKnownMarketplaces`) are also read by {% data variables.copilot.copilot_in_the_cloud_short %}, not only {% data variables.copilot.copilot_cli_short %}. This lets you enable the same plugins for both clients from a single file. For more information about plugins, see [AUTOTITLE](/copilot/concepts/customizations/plugins).
 
 Only the keys listed in the following table are supported at the repository level. Any other keys—including keys that are valid in the user configuration file—are silently ignored. Each supported key has a directional merge policy that keeps the override fail-closed and safe.
 
@@ -583,7 +867,7 @@ Each line is a glob pattern matched against model IDs, or a `fallback:` directiv
 # .github/allowed_models.txt
 fallback: gpt-6-astra
 gpt-6-astra
-gpt-5.4
+gpt-6-sol
 claude-sonnet-*
 ```
 
@@ -658,20 +942,21 @@ Only the following keys are supported in MDM managed settings.
 | `enabledPlugins` | Enable or disable specific plugins |
 | `extraKnownMarketplaces` | Add trusted plugin marketplaces |
 | `forceLoginOrgs` | Pin sign-in to an approved set of {% data variables.product.github %} organizations (an array of organization logins, matched case-insensitively). {% data variables.product.prodname_copilot_short %} only runs for an account belonging to at least one listed organization; a personal account, an account that belongs only to some other enterprise, or BYOK/API-key authentication is refused with an actionable error. Set an empty array to turn the pin off without deleting the key. Deploy this key through the device channel (MDM plist/registry, or `managed-settings.json`) since it must be able to redirect a developer's first sign-in—the server-managed channel only reaches accounts that have already authenticated into the organization. This key fails closed: an unusable value, or a managed policy that can't be read on a known-managed device, blocks all sign-in until fixed. |
-| `forceRemoteSettingsRefresh` | Require a fresh server-managed settings fetch on startup, even when a fresh cached policy exists. The cached entry is still kept as a fallback if the fetch fails. The device (MDM) value takes precedence over a cached server value. |
+| `forceRemoteSettingsRefresh` | Require a fresh server-managed settings fetch on startup, even when a fresh cached policy exists. Cached policy cannot satisfy the freshness requirement. If the fetch fails, affected operations remain restricted until current policy is confirmed. The device (MDM) value takes precedence over a cached server value. |
 | `model` | Set a default model for all users (overridden by the `--model` flag or a resumed-session model). `effortLevel` and `contextTier` set alongside `model` apply the same managed reasoning effort and context tier as the corresponding [repository settings](#repository-settings-githubcopilotsettingsjson) keys, but only when the managed model supports explicit effort/context options. |
-| `permissions` | Set managed permissions, including `disableBypassPermissionsMode` and `deny` / `ask` / `allow` rule arrays. See [Managed permission rules](#managed-permission-rules). |
+| `permissions` | Set managed permissions, including `disableBypassPermissionsMode`, `deny` / `ask` / `allow` rule arrays, and the `limitTo` domain boundary array. See [Managed permission rules](#managed-permission-rules) and [Domain boundary (`limitTo`)](#domain-boundary-limitto). |
 | `policyHelper` | Register an executable that supplies the lowest-priority managed-settings layer. Fields: `path` (required), plus optional `args`, `timeoutMs`, and `refreshIntervalMs`. If both a device (MDM) and a server policy register a `policyHelper`, the device registration wins. |
 | `remoteControl` | Control whether sessions on this device can be controlled from other devices. `mode` is `"enabled"`, `"disabled"`, or `"requireSSO"` (requires `githubDotComOrganizations` when set). |
+| `requireBase64ImageAttachments` | When `true`, require base64-encoded image attachments instead of attachment URLs. `false` or unset keeps existing behavior. |
 | `sandbox` | Set a sandbox policy floor that users cannot relax. Supported settings include `enabled`, `failIfUnavailable`, `allowBypass`, `addCurrentWorkingDirectory`, `sandboxMcpServers`, `sandboxLspServers`, `auth.git`, `auth.gh`, `allowDevToolAccess`, `learningMode`, and the `userPolicy.*` filesystem and network rules. The managed value always takes precedence over a user's own value in the safer direction. Turning the sandbox on, requiring it to succeed, and sandboxing MCP and LSP servers cannot be turned off. Disabling bypass or credential injection cannot be re-enabled. Filesystem allow lists can only be narrowed, and denied paths can only be added to. `failIfUnavailable` can only be set by an administrator and blocks the session when the sandbox cannot be established. For the settings users can set themselves, see [User settings](#user-settings-copilotsettingsjson) or run `copilot help sandbox`. |
 | `shellShortcut` | Force-enable or force-disable the `$` interactive shell shortcut for all users. A managed value always overrides the user's own `shellShortcut` setting. |
 | `strictKnownMarketplaces` | Restrict plugins to an allowlist of known marketplaces (a JSON array of marketplace specs). The allowlist also governs built-in marketplaces once set—an empty array (`[]`) hides and blocks every marketplace, including built-ins, not just user- or repository-added ones. |
-| `telemetry` | Push baseline OpenTelemetry export configuration: `enabled`, `endpoint`, `protocol`, `headers`, `resourceAttributes`, `captureContent`, `lockCaptureContent`, and `serviceName`. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#opentelemetry-monitoring). |
+| `telemetry` | Push baseline OpenTelemetry export configuration: `enabled`, `endpoint`, `protocol`, `headers`, `resourceAttributes`, `captureContent`, `lockCaptureContent`, `serviceName`, and `headersProvider`. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#opentelemetry-monitoring). |
 
 > [!NOTE]
 > * `policyHelper.path` accepts an absolute path, a home-relative path (`~/...`), or a bare program name resolved from `PATH`. Other relative forms are rejected. The registration is accepted and validated, but the runtime doesn't yet invoke the helper—helper execution ships in a future release.
 > * When `remoteControl.mode` is `"requireSSO"`, list the allowed organizations in `remoteControl.githubDotComOrganizations`. The client must be SSO-authorized for at least one listed {% data variables.product.prodname_dotcom_the_website %} organization—it no longer needs to be authorized for all of them.
-> * Set `permissions.disableBypassPermissionsMode` to `"disable"` in MDM managed settings to enforce the restriction at the device level. Account switches cannot override this policy. Set it to `"allow-auto-only"` to block full allow-all escalation while still permitting `/permissions assisted` (LLM-assisted permission approval). If an unrecognized value is set, the CLI logs the issue and enforces `"disable"` as a fail-closed default, so a malformed managed policy still restricts the allow-all options instead of silently allowing them. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#restricting-the---allow-all-options).
+> * Set `permissions.disableBypassPermissionsMode` to `"disable"` in MDM managed settings to block allow-all options at the device level. Account switches cannot override this policy. If an unrecognized value is set, the CLI logs the issue and enforces `"disable"` as a fail-closed default. See [AUTOTITLE](/copilot/reference/copilot-cli-reference/cli-command-reference#restricting-the-allow-all-options).
 > * Most managed keys lock the entire row: a local edit is silently overridden by the managed value on the next load. `enabledPlugins` and `extraKnownMarketplaces` are the exception—the managed layer merges these maps with your own entries field-by-field instead of replacing them outright. This means the lock applies **per entry**, not to the whole key: a plugin or marketplace pinned by a managed policy can't be re-enabled, disabled, or repointed locally, but other entries in the same map remain fully user-controlled.
 > * `sandbox.learningMode` is Windows-only and can only be set through native MDM (for example, through Intune or the registry)—a `managed-settings.json` file value is ignored. On a host with denial capture, set it to `"allow"` to start sandboxed shell commands in record-and-allow mode instead of the default record-and-deny mode, recording each filesystem or process access and allowing it rather than refusing it (network policy is still enforced). This lets an administrator observe what a cohort's commands need before locking them down; it is not a containment mode. The status line shows `sandbox relaxed` and shell calls show `(sandbox relaxed)` while it applies. A `deny` value (the default), or removing the key, returns the cohort to the ordinary enforced sandbox, and `deny` from any managed channel always wins over `allow`. User settings and SDK hosts cannot set this key.
 
@@ -701,6 +986,24 @@ Rules are combined across managed sources with a fixed precedence: deny always w
 
 `Edit(...)` and `Write(...)` rules apply to more than the built-in file tools. They also cover files written directly by a shell command. {% data variables.copilot.copilot_cli_short %} recognizes a fixed set of these writes. It covers Bash output redirections (`>`, `>>`, `>|`, `&>`, `&>>`), PowerShell output redirections (`>`, `>>`, `*>`, `*>>`), and a small set of in-place `sed` edits (`sed -i` or `--in-place`, and the BSD forms `-i ''` and `-I ''`). When {% data variables.copilot.copilot_cli_short %} can work out the target file from the command, a matching `deny` rule blocks the write and a matching `ask` rule prompts you first. This applies even when a broad rule like `Shell(*)` would otherwise allow the command. Sometimes the target file cannot be worked out ahead of time, for example when the path comes from a variable. In that case these path rules do not apply, and the command is checked by the normal shell command rules instead.
 
+### Domain boundary (`limitTo`)
+
+Add a `limitTo` array alongside `deny`, `ask`, and `allow` under the managed `permissions` key to enforce a closed-world domain allowlist:
+
+```json
+{
+    "permissions": {
+        "limitTo": ["github.com", "*.github.com"]
+    }
+}
+```
+
+Only `Domain(...)` entries are supported in `limitTo`. Any agent network request to a domain outside the list is denied without prompting, and user rules, saved approvals, and allow-all modes can't widen it. URLs detected in shell requests are treated as `Domain` requests and must also satisfy the boundary. `limitTo` doesn't restrict `shell`, `read`, or `write` operations by themselves.
+
+An empty `limitTo` list denies every domain request. An invalid list, or an invalid entry, is enforced as an empty list (and reported as a configuration error) rather than discarding the rest of the managed policy.
+
+`deny` still takes precedence over `limitTo`. `ask` and `allow` only refine requests that are already inside the boundary. Like `allow`, `limitTo` is an intersection across managed sources—every managed source that declares a `limitTo` list must admit the request.
+
 ## Managed MCP server allow/deny list
 
 Administrators can govern MCP servers directly through MDM managed settings, independent of the [enterprise MCP allowlist](/copilot/reference/copilot-cli-reference/cli-command-reference#enterprise-mcp-allowlist).
@@ -725,7 +1028,7 @@ Each entry identifies a server by exactly one of the following matchers.
 |---------|---------|-------|
 | `serverUrl` | A remote (HTTP/SSE) server by URL | Supports `*` wildcards; scheme and host match case-insensitively, path case-sensitively. `${VAR}` references expand before matching. |
 | `serverCommand` | A stdio server by its exact command and arguments, in order | `${VAR}` references expand before matching. |
-| `serverName` | A server by its assigned label | Allowlist entries are restricted to `[A-Za-z0-9_-]+` (no wildcards); denylist entries accept any non-empty string. |
+| `serverName` | A server by its assigned label | Allowlist entries are restricted to `[A-Za-z0-9_./-]+` (case-sensitive, no wildcards; registry names such as `microsoft/playwright-mcp` are accepted); denylist entries accept any non-empty string. |
 
 Rules:
 
